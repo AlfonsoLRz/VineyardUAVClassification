@@ -1,5 +1,6 @@
 target_area = 1
 folder_path = 'media/Mateus_2022/Area0' + str(target_area) + '/'
+result_folder = 'results/'
 class_mask_extension = '_class.png'
 hc_extension = '.hdr'
 

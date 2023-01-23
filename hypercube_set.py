@@ -23,32 +23,32 @@ class RedVineyardLabel(Enum):
     Enum for the different red wine labels.
     """
     Alvarelhao = 1
-    Sousao = 2
-    TourigaNacional = 3
-    TourigaFrancesa = 4
-    Alicante = 5
-    TourigaFemea = 6
-    Barroca = 7
-    TintaRoriz = 8
+    Sousao = 8
+    TourigaNacional = 2
+    TourigaFrancesa = 7
+    Alicante = 3
+    TourigaFemea = 4
+    Barroca = 6
+    TintaRoriz = 5
 
 
 class WhiteVineyardLabel(Enum):
     """
     Enum for the different white wine labels.
     """
-    UNKNOWN_1 = 1
-    BOAL = 2
-    UNKNOWN_2 = 3
-    UNKNOWN_3 = 4
-    CODEGA_DO_LADINHO = 5
-    UNKNOWN_4 = 6
-    MOSCATEL_GALEGO = 7
-    NASCATEL_GALECO_ROXO = 8
-    ARITO_DO_DOURO = 9
-    CERCIAL = 10
-    MALVASIA_FINA = 11
-    UNKNOWN_5 = 12
-    UNKNOWN_6 = 13
+    Unknown1 = 1
+    Boal = 2
+    Unknown2 = 3
+    Unknown3 = 4
+    CodegaDoLadinho = 5
+    Unknown4 = 6
+    MoscatelGalego = 7
+    NascatelGalegoRoixo = 8
+    AritoDoDouro = 9
+    Cercial = 10
+    MalvasiaFina = 11
+    Unknown5 = 12
+    Unknown6 = 13
 
 
 class HypercubeSet:

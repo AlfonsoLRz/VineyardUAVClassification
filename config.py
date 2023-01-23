@@ -4,12 +4,14 @@ from tk.keras.optimizers import Adadelta, SGD, Adam, RMSprop
 
 
 # Global config
-loss = 'sparse_categorical_crossentropy'
-metrics = ['sparse_categorical_accuracy']
 batch_size = 32
 epochs = 100
+last_activation = 'softmax'
+kernel_size = 3
+loss = 'sparse_categorical_crossentropy'
 patch_size = 11
 patch_overlapping = 9
+strides = 2
 
 
 # Callbacks
@@ -36,6 +38,14 @@ class TimeCallback(Callback):
 
 
 training_config = {
+    'allopezr_2d': {
+        'optimizer': RMSprop(learning_rate=0.001),
+        'callbacks': [],
+        'intermediate_activation': 'relu',
+        'kernel_size': 3,
+        'start_size': 16,
+        'strides': 2,
+    },
     'aspn': {
         'optimizer': Adam(learning_rate=1e-1),
         'callbacks': [],
@@ -43,22 +53,40 @@ training_config = {
     'fsk_net': {
         'optimizer': RMSprop(learning_rate=3e-4),
         'callbacks': [],
+        'start_size': 16,
     },
     'hybrid_sn': {
         'optimizer': Adam(learning_rate=1e-3),
         'callbacks': [],
+        'start_size': 8,
     },
     'jigsaw_hsi': {
         'optimizer': Adadelta(learning_rate=1e-2),
         'callbacks': [],
+        'start_size': None,
+        'kernel_size': 13,
     },
     'lt_cnn': {
         'optimizer': Adam(learning_rate=1e-3, decay=1e-5),
         'callbacks': [LearningRateScheduler(decay_schedule, verbose=1)],
+        'start_size': 32,
+        'kernel_size': 3,
+        'strides': 2,
+    },
+    'nezami': {
+        'optimizer': Adam(learning_rate=1e-3),
+        'callbacks': [],
+        'intermediate_activation': 'relu',
+        'kernel_size': 3,
+        'start_size': 16,
+        'stride': 2,
     },
     'spectral_net': {
         'optimizer': SGD(learning_rate=1e-2, momentum=0.9),
         'callbacks': [],
+        'start_size': 64,
+        'kernel_size': 3,
+        'strides': 7,
     },
     'ours_3d': {
         'optimizer': Adam(learning_rate=1e-3),

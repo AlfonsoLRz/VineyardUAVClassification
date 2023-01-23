@@ -1,16 +1,19 @@
-from config import *
 import matplotlib.pyplot as plt
 import numpy as np
-from paths import *
+import paths
 from randomness import *
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 import umap.umap_ as umap
 
 
-def render_confusion_matrix(Y_test, Y_pred):
-    flatten_y_test = np.reshape(Y_test, (-1,))
-    flatten_y_pred = np.reshape(Y_pred, (-1,))
+def render_confusion_matrix(y_test, y_pred):
+    """
+    Renders the confusion matrix of the model predictions.
+    """
+    flatten_y_test = np.reshape(y_test, (-1,))
+    flatten_y_pred = np.reshape(y_pred, (-1,))
 
-    num_classes = np.max(Y_test) + 1
     cm = confusion_matrix(flatten_y_test, flatten_y_pred)
     cmn = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
@@ -18,10 +21,10 @@ def render_confusion_matrix(Y_test, Y_pred):
     # sn.heatmap(df_cm, annot=True, annot_kws={"size": 10}, cmap='Blues', fmt='g')
     # sns.heatmap(cmn, annot=True, fmt='.2f', xticklabels=target_names, yticklabels=target_names)
 
-    sns.heatmap(cmn, annot=True, fmt='.2f', cmap='magma', )
+    sns.heatmap(cmn, annot=True, fmt='.2f', cmap='magma')
     plt.ylabel('Actual')
     plt.xlabel('Predicted')
-    plt.savefig('ConfusionMatrix.png')
+    plt.savefig(paths.result_folder + 'ConfusionMatrix.png')
     plt.show(block=False)
 
 
@@ -39,11 +42,17 @@ def render_hc_spectrum_label(hc_numpy, mask):
 
 
 def render_mask_histogram(label):
+    """
+    Renders the histogram of the mask.
+    """
     plt.hist(label.flatten(), bins='auto', rwidth=1.0)
     plt.show()
 
 
 def render_model_history(history, model_name, accuracy="sparse_categorical_accuracy"):
+    """
+    Renders the history of the model after training.
+    """
     # Accuracy
     h_epochs = range(1, len(history.history['loss']) + 1)
 

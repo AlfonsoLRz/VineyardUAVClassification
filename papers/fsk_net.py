@@ -58,13 +58,13 @@ def transition_block(x, reduction, name):
     return x
 
 
-def get_fsk_model(img_size, num_classes, start_size=32, kernel_size=4):
+def get_fsk_model(img_size, num_classes, start_size=32):
     if len(img_size) != 4:
         raise Exception("Input shape should be a tuple (nb_channels, kernel_dim1, kernel_dim2, kernel_dim3)")
 
     input = Input(shape=img_size)
-    conv1 = Conv3D(start_size, kernel_size=(3, 3, 3), strides=(1, 1, 1), padding='same', kernel_initializer='he_normal')(input)
-    print(conv1.shape)
+    conv1 = Conv3D(start_size, kernel_size=(3, 3, 3), strides=(1, 1, 1), padding='same',
+                   kernel_initializer='he_normal')(input)
     pool1 = MaxPooling3D(pool_size=(3, 3, 3), strides=(2, 2, 2))(conv1)
 
     # Dense Block1

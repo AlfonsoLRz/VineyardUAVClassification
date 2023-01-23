@@ -1,4 +1,4 @@
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, BatchNormalization, Activation, Concatenate
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, GlobalAveragePooling2D, Dropout, Concatenate
 
 
 def inception_module(x, num_filters_1, num_filters_2, num_filters_3, num_filters_4):
@@ -18,7 +18,7 @@ def inception_module(x, num_filters_1, num_filters_2, num_filters_3, num_filters
     return Concatenate(axis=3)([conv_1x1_0, conv_3x3_1_2, conv_3x3_2])
 
 
-def get_lt_cnn_model(img_size, start_size=48):
+def get_lt_cnn_model(img_size, num_classes, start_size=48, kernel_size=5, strides=2):
     input = Input(shape=img_size)
 
     conv_1a = Conv2D(start_size * 2, kernel_size=(5, 5), padding='same')(input)
@@ -40,7 +40,15 @@ def get_lt_cnn_model(img_size, start_size=48):
     conv_1x1_2 = Conv2D(start_size * 7, kernel_size=(1, 1))(max_pool_3a)
     conv_3x3_2 = Conv2D(start_size * 8, kernel_size=(3, 3))(conv_1x1_2)
 
-    return Concatenate(axis=3)([conv_1x1_0, conv_3x3_2])
+    concatenate = Concatenate(axis=3)([conv_1x1_0, conv_3x3_2])
+
+    max_pool_4 = MaxPooling2D(pool_size=(3, 3), strides=2)(concatenate)
+    gap = GlobalAveragePooling2D()(max_pool_4)
+    fully_connected = Dense(196)(gap)
+    dropout = Dropout(0.4)(fully_connected)
+    softmax = Dense(num_classes, activation='softmax')(dropout)
+
+    return softmax
 
 
 

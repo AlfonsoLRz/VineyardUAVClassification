@@ -104,11 +104,9 @@ def jigsaw_m_end(module_b, first_layer=None, crop=True):
         crop_2 = fl_shape[2] // 2
         jigsaw_center = Cropping2D(cropping=((crop_1, crop_1), (crop_2, crop_2)))(first_layer)
         input_pixel = Flatten()(jigsaw_center)
-        input_pixel = Dense(16, kernel_regularizer=l2(L2),
-                            activity_regularizer=act_reg)(input_pixel)
+        input_pixel = Dense(16, kernel_regularizer=l2(L2), activity_regularizer=act_reg)(input_pixel)
         input_pixel = Dropout(0.4)(input_pixel)
-        input_pixel = Dense(16, kernel_regularizer=l2(L2),
-                            activity_regularizer=act_reg)(input_pixel)
+        input_pixel = Dense(16, kernel_regularizer=l2(L2), activity_regularizer=act_reg)(input_pixel)
         input_pixel = Dropout(0.4)(input_pixel)
         flat = Concatenate(axis=-1)([input_pixel, module_b])
     else:
@@ -120,13 +118,13 @@ def jigsaw_m_end(module_b, first_layer=None, crop=True):
     return dropout
 
 
-def build_jigsaw_hsi(num_classes, internal_size=13, image_dim=(19, 19, 7, 1), dimension_filters=None, crop=True):
-    print(f"*** Building Jigsaw with up to {internal_size}x{internal_size} kernels")
+def build_jigsaw_hsi(img_size, num_classes, kernel_size=13, start_size=None, crop=True):
+    print(f"*** Building Jigsaw with up to {start_size}x{start_size} kernels")
 
-    my_input = Input(shape=image_dim)
+    input = Input(shape=img_size)
 
     # Normalize input data
-    unit_norm = LayerNormalization(axis=2)(my_input)
+    unit_norm = LayerNormalization(axis=2)(input)
 
     # Module A
     # conv_layer1 = Conv3D(filters=dimension_filters, kernel_size=(1, 1, 3), strides=(1, 1, 2), activation='relu', name='3d_1x1x7')(unit_norm)
@@ -141,23 +139,23 @@ def build_jigsaw_hsi(num_classes, internal_size=13, image_dim=(19, 19, 7, 1), di
         conv1 = conv_layer3
 
     # Not needed for SA
-    if (dimension_filters is None) or (dimension_filters < 1):
+    if start_size is None or start_size < 1:
         # my_input_shape = my_input.shape
         # conv1 = Reshape((my_input_shape[1], my_input_shape[2], my_input_shape[3]*my_input_shape[4]))(my_input)
         conv1 = conv1
     else:
-        conv1 = Conv2D(dimension_filters, (1, 1), padding='same', activation='relu', kernel_regularizer=l2(L2),
+        conv1 = Conv2D(start_size, (1, 1), padding='same', activation='relu', kernel_regularizer=l2(L2),
                        name='spectral_filter')(conv1)
 
     # Module B
-    jigsaw_01 = jigsaw_m2(my_input if conv1 is None else conv1, internal_size=internal_size)
+    jigsaw_01 = jigsaw_m2(input if conv1 is None else conv1, internal_size=kernel_size)
     # For SA, the next two lines must be uncommented
     # jigsaw_01 = jigsaw_m2( jigsaw_01, first_layer=my_input, internal_size = internal_size )
     # jigsaw_01 = jigsaw_m2( jigsaw_01, internal_size = internal_size )
 
     # Module C
-    loss3_classifier_act = jigsaw_m_end(jigsaw_01, first_layer=my_input, crop=crop)  # testing num_classes
+    loss3_classifier_act = jigsaw_m_end(jigsaw_01, first_layer=input, crop=crop)  # testing num_classes
     output = Dense(num_classes, activation="softmax", name="dense_output")(loss3_classifier_act)
 
-    model3 = Model(inputs=my_input, outputs=output, name='JigsawHSI')
+    model3 = Model(inputs=input, outputs=output, name='JigsawHSI')
     return model3

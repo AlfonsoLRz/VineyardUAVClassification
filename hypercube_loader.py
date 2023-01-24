@@ -22,6 +22,7 @@ def __load_hc(path, plot_hc=False):
 
     return hc, hc_instance.bands.centers
 
+
 def __load_mask(path, plot_mask=False):
     """
     Loads a mask from a given path.
@@ -41,9 +42,6 @@ def __load_mask(path, plot_mask=False):
 def load_hypercubes(n_max_cubes=None, plot_hc=False, plot_mask=False, additional_root='', selected_cubes=[]):
     """
     Loads all hypercubes from the given folder.
-    :param n_max_cubes: Maximum number of cubes to be loaded
-    :param plot_mask: Renders mask if enabled.
-    :return: Set of loaded cubes.
     """
     cube_paths = glob.glob(additional_root + paths.folder_path + 'raw*rf' + paths.hc_extension)
     cubes = []

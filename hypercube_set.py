@@ -1,6 +1,7 @@
+from alive_progress import alive_bar
 from enum import Enum
-
 import hypercube as hc
+from randomness import *
 from rendering import *
 from sklearn.decomposition import FactorAnalysis, NMF, PCA, TruncatedSVD
 from sklearn.preprocessing import StandardScaler
@@ -59,9 +60,11 @@ class HypercubeSet:
         """
         self._hypercube = None
         self._mask = None
-        self._hypercube_instances = hc_array
         self._hypercube_shapes = []
         self._bands = None
+        self._train_indices = None
+        self._test_indices = None
+        self._remove_ground_indices = None
 
         if hc_array is not None and len(hc_array) > 0:
             self._bands = hc_array[0].get_bands()
@@ -85,6 +88,8 @@ class HypercubeSet:
 
             self._mask = HypercubeSet._to_id_image(self._mask)
 
+        del hc_array
+
     def flatten(self):
         """
         Turns a 3D hypercube into a 2D vector for preprocessing such as matrix factorization.
@@ -106,15 +111,6 @@ class HypercubeSet:
         """
         return len(self._hypercube_shapes)
 
-    def get_rgb_indices(self):
-        """
-        :return: Indices of the RGB bands.
-        """
-        if self._hypercube is not None:
-            return hc.Hypercube.get_rgb_indices(self._hypercube_instances[0])
-
-        return None
-
     def get_shape(self):
         """
         :return: Shape of the hypercube set.
@@ -133,6 +129,37 @@ class HypercubeSet:
             variance += np.var(self._hypercube[self._mask == class_idx, :])
 
         return variance / (num_classes - 1)
+
+    def obtain_train_indices(self, test_percentage):
+        """
+        Obtains the train indices.
+        :param test_percentage: Percentage of the data to be used as test data.
+        """
+        num_pixels = self._mask.shape[0] * self._mask.shape[1]
+        # Remove ground indices from the overall set
+        available_indices = np.setdiff1d(np.arange(num_pixels), self._remove_ground_indices)
+        num_pixels = len(available_indices)
+
+        self._train_indices = np.random.choice(available_indices, int(num_pixels * (1.0 - test_percentage)),
+                                               replace=False)
+        self._test_indices = np.setdiff1d(available_indices, self._train_indices)
+
+    def obtain_ground_labels(self):
+        """
+        Removes the ground labels from the hypercube set.
+        """
+        # Maximum number of vegetation samples
+        max_vegetation_samples = 0
+        for label in range(1, self.get_num_classes()):
+            max_vegetation_samples = max(max_vegetation_samples, np.sum(self._mask == label))
+
+        # Flatten mask
+        mask = np.reshape(self._mask, self._mask.shape[0] * self._mask.shape[1])
+        # Ground indices
+        ground_indices = np.where(mask == 0)[0]
+        del mask
+        num_removable_indices = len(ground_indices) - max_vegetation_samples
+        self._remove_ground_indices = np.random.choice(ground_indices, num_removable_indices, replace=False)
 
     def plot(self, plot_hc=True, plot_mask=True):
         """
@@ -163,27 +190,28 @@ class HypercubeSet:
             else:
                 print('Label {}: {}'.format(WhiteVineyardLabel(label).name, np.sum(self._mask == label)))
 
-    def reduce_layers(self, n_layers=30, selection_method=LayerSelectionMethod.PCA):
+    @staticmethod
+    def reduce_layers(hypercube, mask, n_layers=30, selection_method=LayerSelectionMethod.PCA):
         """
         Reduces the number of layers in the hypercube.
         """
         reduction = None
 
         if selection_method == LayerSelectionMethod.PCA:
-            reduction = PCA(n_components=n_layers, random_state=random_state)
+            reduction = PCA(n_components=n_layers, random_state=random_seed)
         elif selection_method == LayerSelectionMethod.FACTOR_ANALYSIS:
-            reduction = FactorAnalysis(n_components=n_layers, random_state=random_state)
+            reduction = FactorAnalysis(n_components=n_layers, random_state=random_seed)
         elif selection_method == LayerSelectionMethod.SVD:
-            reduction = TruncatedSVD(n_components=n_layers, random_state=random_state)
+            reduction = TruncatedSVD(n_components=n_layers, random_state=random_seed)
         elif selection_method == LayerSelectionMethod.NMF:
-            reduction = NMF(n_components=n_layers, random_state=random_state)
+            reduction = NMF(n_components=n_layers, random_state=random_seed)
         elif selection_method == LayerSelectionMethod.LDA:
             reduction = LDA(n_components=n_layers)
 
         if selection_method == LayerSelectionMethod.LDA:
-            self._hypercube = reduction.fit_transform(hc, y=self._mask)
+            reduction.fit(hypercube, y=mask)
         else:
-            self._hypercube = reduction.fit_transform(hc)
+            reduction.fit(hypercube)
 
         return reduction
 
@@ -193,8 +221,55 @@ class HypercubeSet:
         """
         threed_shape = self._hypercube.shape
         self._hypercube, self._mask = self.flatten()
-        render_hc_spectrum_class(self._hypercube, self._mask)
-        self._to3D(threed_shape)
+        render_hc_spectrum_label(self._hypercube, self._mask)
+        self._to_3d(threed_shape)
+
+    def split_train(self, patch_size, max_train_samples=None):
+        """
+        Splits the hypercube set into train and test sets.
+        """
+        if max_train_samples is None:
+            max_train_samples = self._train_indices.shape[0]
+        else:
+            max_train_samples = min(max_train_samples, self._train_indices.shape[0])
+
+        train_indices = self._train_indices[:max_train_samples]
+        self._train_indices = self._train_indices[max_train_samples:]
+
+        return self.__split_indices(train_indices, patch_size)
+
+    def split_test(self, patch_size):
+        """
+        Splits the hypercube into test patches.
+        """
+        return self.__split_indices(self._test_indices, patch_size)
+
+    def __split_indices(self, indices, patch_size):
+        patch = []
+        label = []
+        hypercube_shape = self._hypercube_shapes[0]
+        big_hypercube_shape = self._hypercube.shape
+        num_train_samples = indices.shape[0]
+        half_patch_size = patch_size // 2
+
+        with alive_bar(num_train_samples, force_tty=True) as bar:
+            for index in indices:
+                y, x = index // big_hypercube_shape[1], index % big_hypercube_shape[1]
+                hypercube_index = int(x // hypercube_shape[1])
+                base_hypercube_x = hypercube_index * hypercube_shape[1]
+                x -= base_hypercube_x
+
+                if (x - half_patch_size) >= 0 and (x + half_patch_size) < hypercube_shape[1] and \
+                        (y - half_patch_size) >= 0 and (y + half_patch_size) < hypercube_shape[0]:
+                    x += base_hypercube_x
+                    patch.append(self._hypercube[y - half_patch_size:y + half_patch_size,
+                                 x - half_patch_size:x + half_patch_size, :])
+                    label.append(self._mask[y - half_patch_size:y + half_patch_size,
+                                 x - half_patch_size:x + half_patch_size])
+
+                bar()
+
+        return np.asarray(patch), np.asarray(label)
 
     def split_all(self, chunk_size, overlapping):
         """
@@ -236,9 +311,14 @@ class HypercubeSet:
         threed_shape = self._hypercube.shape
         self._hypercube, self._mask = self.flatten()
 
-        self.reduce_layers(n_layers=num_features, selection_method=selection_method)
+        reduction = self.reduce_layers(n_layers=num_features, selection_method=selection_method,
+                                       hypercube=self._hypercube[self._train_indices],
+                                       mask=self._mask[self._train_indices])
+        self._hypercube = reduction.transform(self._hypercube)
         if standardize:
-            self._hypercube = StandardScaler().fit_transform(self._hypercube)
+            standard_scaler = StandardScaler()
+            standard_scaler.fit(self._hypercube[self._train_indices])
+            self._hypercube = standard_scaler.transform(self._hypercube)
 
         threed_shape = (threed_shape[0], threed_shape[1], self._hypercube.shape[1])
         self._to_3d(threed_shape)

@@ -85,11 +85,11 @@ def reduce_labels_center(label):
     Reduce the labels to the center of the patch.
     """
     new_labels = np.zeros((label.shape[0],), np.int32)
-    chunk_shape = label[0].shape
-    chunk_center = np.array([chunk_shape[0] // 2, chunk_shape[1] // 2])
+    patch_shape = label[0].shape
+    patch_center = np.array([patch_shape[0] // 2, patch_shape[1] // 2])
 
     for i in range(0, len(label)):
-        new_labels[i] = label[i][chunk_center[0], chunk_center[1]]
+        new_labels[i] = label[i][patch_center[0], patch_center[1]]
 
     return new_labels
 

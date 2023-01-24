@@ -1,6 +1,6 @@
 from keras.callbacks import LearningRateScheduler, Callback
+from tensorflow.keras.optimizers import Adadelta, SGD, Adam, Adamax, RMSprop
 import time
-from tk.keras.optimizers import Adadelta, SGD, Adam, RMSprop
 
 
 # Global config
@@ -12,6 +12,8 @@ loss = 'sparse_categorical_crossentropy'
 patch_size = 11
 patch_overlapping = 9
 strides = 2
+test_split = 0.2
+validation_split = 0.1
 
 
 # Callbacks

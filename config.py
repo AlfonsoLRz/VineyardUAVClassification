@@ -4,7 +4,7 @@ import time
 
 
 # Global config
-batch_size = 32
+batch_size = 128
 epochs = 100
 last_activation = 'softmax'
 kernel_size = 3
@@ -45,7 +45,7 @@ training_config = {
         'callbacks': [],
         'intermediate_activation': 'relu',
         'kernel_size': 3,
-        'start_size': 16,
+        'start_size': 64,
         'strides': 2,
     },
     'aspn': {

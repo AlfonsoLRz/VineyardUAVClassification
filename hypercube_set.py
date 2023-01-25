@@ -259,13 +259,13 @@ class HypercubeSet:
                 base_hypercube_x = hypercube_index * hypercube_shape[1]
                 x -= base_hypercube_x
 
-                if (x - half_patch_size) >= 0 and (x + half_patch_size) < hypercube_shape[1] and \
-                        (y - half_patch_size) >= 0 and (y + half_patch_size) < hypercube_shape[0]:
+                if (x - half_patch_size) >= 0 and (x + half_patch_size + 1) < hypercube_shape[1] and \
+                        (y - half_patch_size) >= 0 and (y + half_patch_size + 1) < hypercube_shape[0]:
                     x += base_hypercube_x
-                    patch.append(self._hypercube[y - half_patch_size:y + half_patch_size,
-                                 x - half_patch_size:x + half_patch_size, :])
-                    label.append(self._mask[y - half_patch_size:y + half_patch_size,
-                                 x - half_patch_size:x + half_patch_size])
+                    patch.append(self._hypercube[y - half_patch_size:y + half_patch_size + 1,
+                                 x - half_patch_size:x + half_patch_size + 1, :])
+                    label.append(self._mask[y - half_patch_size:y + half_patch_size + 1,
+                                 x - half_patch_size:x + half_patch_size + 1])
 
                 bar()
 
@@ -311,14 +311,20 @@ class HypercubeSet:
         threed_shape = self._hypercube.shape
         self._hypercube, self._mask = self.flatten()
 
-        reduction = self.reduce_layers(n_layers=num_features, selection_method=selection_method,
-                                       hypercube=self._hypercube[self._train_indices],
-                                       mask=self._mask[self._train_indices])
-        self._hypercube = reduction.transform(self._hypercube)
-        if standardize:
-            standard_scaler = StandardScaler()
-            standard_scaler.fit(self._hypercube[self._train_indices])
-            self._hypercube = standard_scaler.transform(self._hypercube)
+        with alive_bar(2, force_tty=True) as bar:
+            reduction = self.reduce_layers(n_layers=num_features, selection_method=selection_method,
+                                           hypercube=self._hypercube[self._train_indices],
+                                           mask=self._mask[self._train_indices])
+            self._hypercube = reduction.transform(self._hypercube)
+
+            bar()
+
+            if standardize:
+                standard_scaler = StandardScaler()
+                standard_scaler.fit(self._hypercube[self._train_indices])
+                self._hypercube = standard_scaler.transform(self._hypercube)
+
+            bar()
 
         threed_shape = (threed_shape[0], threed_shape[1], self._hypercube.shape[1])
         self._to_3d(threed_shape)

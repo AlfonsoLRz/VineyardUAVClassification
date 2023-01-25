@@ -12,6 +12,9 @@ import tensorflow as tf
 from tensorflow import keras
 
 
+# -------------- SUPPORT FUNCTIONS --------------
+
+
 def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=10):
     return [
         tf.keras.callbacks.TensorBoard(log_dir='./logs'),
@@ -22,7 +25,7 @@ def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_acc
             mode='auto'
         ),
         keras.callbacks.ModelCheckpoint(
-            filepath='Net/' + model_name + '.h5',
+            filepath=paths.result_folder + 'network/' + model_name + '.h5',
             monitor='val_loss',
             save_best_only=True,
             verbose=1
@@ -34,7 +37,6 @@ def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_acc
 def get_metrics(num_classes):
     return [
         keras.metrics.SparseCategoricalAccuracy(name='sparse_categorical_accuracy'),
-        keras.metrics.MeanIoU(num_classes=num_classes, name='mean_iou'),
     ]
 
 
@@ -119,6 +121,8 @@ dict_model = {
 def build_network(network_type, num_classes, image_dim):
     if network_type not in dict_model:
         raise ValueError('Unknown network type: {}'.format(network_type))
+
+    print(training_config[network_type])
 
     return dict_model[network_type](training_config[network_type], image_dim, num_classes)
 

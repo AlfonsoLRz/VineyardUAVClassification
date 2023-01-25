@@ -90,3 +90,4 @@ media/*
 
 # Keras
 *.h5
+logs/*

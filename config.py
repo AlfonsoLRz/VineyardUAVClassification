@@ -4,7 +4,7 @@ import time
 
 
 # Global config
-batch_size = 128
+batch_size = 256
 epochs = 100
 last_activation = 'softmax'
 kernel_size = 3
@@ -45,12 +45,15 @@ training_config = {
         'callbacks': [],
         'intermediate_activation': 'relu',
         'kernel_size': 3,
-        'start_size': 64,
+        'start_size': 32,
         'strides': 2,
     },
     'aspn': {
         'optimizer': Adam(learning_rate=1e-1),
         'callbacks': [],
+        'intermediate_activation': 'relu',
+        'kernel_size': 3,
+        'start_size': 32,
     },
     'fsk_net': {
         'optimizer': RMSprop(learning_rate=3e-4),

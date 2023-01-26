@@ -7,7 +7,7 @@ from randomness import *
 from sklearn.model_selection import train_test_split
 
 
-def augment_chunks(patch, label, brightness_var, noise_var):
+def augment_chunks(patch, label):
     """
     Augment patches by adding variations and random changes.
     """
@@ -16,23 +16,19 @@ def augment_chunks(patch, label, brightness_var, noise_var):
     augmented_chunks = []
     augmented_chunk_labels = []
 
-    noise_transform = A.Compose([A.GaussNoise(var_limit=noise_var, p=1.0)])
-    var_transform = A.Compose([A.RandomBrightnessContrast(brightness_limit=brightness_var, contrast_limit=0, p=1.0)])
-
     for i in range(0, len(patch)):
-        new_images = augment_chunk(patch[i], noise_transform, var_transform)
+        new_images = augment_chunk(patch[i])
         augmented_chunks.extend(new_images)
         augmented_chunk_labels.extend([label[i] for _ in new_images])
 
     return shuffle(np.asarray(augmented_chunks), np.asarray(augmented_chunk_labels))
 
 
-def augment_chunk(img, noise_transform, var_transform):
+def augment_chunk(img):
     """
     Augment a single patch by rotating it.
     """
-    return img, np.fliplr(img), np.flipud(img), np.rot90(img, k=1, axes=(0, 1)), np.rot90(img, k=3, axes=(0, 1)), \
-           noise_transform(image=img)['image'], var_transform(image=img)['image']
+    return img, np.fliplr(img), np.flipud(img), np.rot90(img, k=1, axes=(0, 1)), np.rot90(img, k=3, axes=(0, 1))
 
 
 def balance_classes(patch, label, smote=True, clustering=True, reduce=False):

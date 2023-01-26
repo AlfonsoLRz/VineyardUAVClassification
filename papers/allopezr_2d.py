@@ -1,14 +1,14 @@
+from keras.backend import int_shape
 from keras.models import Model
 from keras.layers import Concatenate, BatchNormalization, Input, Dense, Reshape, Activation, Dropout, Conv2D, \
     LeakyReLU, Flatten, GRU, MaxPooling2D
 
 
-def get_1d_gru_block(input, size, dropout=0.2, initializer=None, activation='relu', return_sequences=False):
-    x = GRU(size, return_sequences=return_sequences, kernel_initializer=initializer)(input)
-    x = Activation(activation)(x)
-    x = BatchNormalization()(x)
-    x = Dropout(dropout)(x)
-    return x
+def get_residual_block(input, start_size, strides):
+    conv1 = Conv2D(start_size, (3, 3), strides=strides, padding='same', activation='relu')(input)
+    conv2 = Conv2D(start_size, (3, 3), strides=strides, padding='same', activation='relu')(conv1)
+    output = Concatenate(axis=3)([conv2, input])
+    return output
 
 
 def get_inception_module(input, start_size, strides):
@@ -28,24 +28,23 @@ def get_inception_module(input, start_size, strides):
 def get_allopezr_2d_model(img_size, num_classes, start_size=32, intermediate_activation='relu', kernel_size=3,
                           strides=2):
     in_patch = Input(shape=img_size)
-    in_pixel = Input(shape=(img_size[2],))
+    #in_pixel = Input(shape=(img_size[2],))
 
-    x = Dense(img_size[0] * img_size[1], activation=intermediate_activation)(in_pixel)
-    x = Reshape((img_size[0], img_size[1], 1))(x)
-    merge = Concatenate()([in_patch, x])
-
-    x = Conv2D(start_size * 1, 1, strides=strides, padding="same")(merge)
+    residual = in_patch
+    x = Conv2D(start_size * 1, 1, strides=strides, padding="same")(in_patch)
     x = LeakyReLU(alpha=0.1)(x)
     x = Conv2D(start_size * 2, kernel_size, strides=strides, padding="same")(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = BatchNormalization()(x)
     x = Dropout(0.4)(x)
+    residual = Conv2D(start_size * 2, 1, strides=strides * 2, padding="same")(residual)
+    x = Concatenate(axis=3)([x, residual])
     x = Conv2D(start_size * 4, kernel_size, strides=strides, padding="same")(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = BatchNormalization()(x)
     x = Flatten()(x)
     x = Dropout(0.1)(x)
     outputs = Dense(num_classes, activation="softmax")(x)
-    model = Model([in_patch, in_pixel], outputs)
+    model = Model([in_patch], outputs)
 
     return model

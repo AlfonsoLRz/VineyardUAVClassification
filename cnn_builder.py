@@ -1,4 +1,6 @@
+import json
 import paths
+import config as cfg
 from config import *
 from papers.allopezr_2d import *
 from papers.aspn import *
@@ -10,7 +12,7 @@ from papers.lt_cnn import *
 from papers.nezami import *
 import tensorflow as tf
 from tensorflow import keras
-
+from tensorflow.keras.optimizers import Adadelta, SGD, Adam, Adamax, RMSprop
 
 # -------------- SUPPORT FUNCTIONS --------------
 
@@ -147,5 +149,45 @@ def run_model(model, X_train, y_train, callbacks, validation_split=0.1):
     """
     Fits the model with X_train and y_train.
     """
+
+    print('Training for {} epochs with batch size of {}...'.format(epochs, batch_size))
+
     return model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,
                      validation_split=validation_split, callbacks=callbacks)
+
+
+# -------------- System files ----------------
+def read_json_config(path, network_type):
+    with open(path, 'r') as f:
+        data_params = json.load(f)
+        if network_type not in data_params:
+            raise ValueError('Unknown network type: {}'.format(network_type))
+
+        network_config = data_params[network_type]
+        if 'start_size' in network_config:
+            training_config[network_type]['start_size'] = int(network_config['start_size'])
+        if 'kernel_size' in network_config:
+            training_config[network_type]['kernel_size'] = int(network_config['kernel_size'])
+        if 'strides' in network_config:
+            training_config[network_type]['strides'] = int(network_config['strides'])
+        if 'intermediate_activation' in network_config:
+            training_config[network_type]['intermediate_activation'] = network_config['intermediate_activation']
+        if 'learning_rate' in network_config and 'optimizer' in training_config[network_type]:
+            training_config[network_type]['optimizer'].learning_rate = float(network_config['learning_rate'])
+
+        if 'batch_size' in data_params:
+            cfg.batch_size = int(data_params['batch_size'])
+        if 'epochs' in data_params:
+            cfg.epochs = int(data_params['epochs'])
+        if 'loss' in data_params:
+            cfg.loss = data_params['loss']
+        if 'last_activation' in data_params:
+            cfg.last_activation = data_params['last_activation']
+        if 'patch_size' in data_params:
+            cfg.patch_size = int(data_params['patch_size'])
+        if 'patch_overlapping' in data_params:
+            cfg.patch_overlapping = int(data_params['patch_overlapping'])
+        if 'test_split' in data_params:
+            cfg.test_split = float(data_params['test_split'])
+        if 'validation_split' in data_params:
+            cfg.validation_split = float(data_params['validation_split'])

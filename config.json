@@ -1,0 +1,47 @@
+{
+    "allopezr_2d": {
+        "intermediate_activation": "relu",
+        "kernel_size": "3",
+        "start_size": "32",
+        "strides": "2",
+        "learning_rate": "0.001"
+    },
+    "aspn": {
+        "start_size": "32"
+    },
+    "fsk_net": {
+        "start_size": "16"
+    },
+    "hybrid_sn": {
+        "start_size": "8"
+    },
+    "jigsaw_hsi": {
+        "kernel_size": "13",
+        "start_size": "4"
+    },
+    "lt_cnn": {
+        "start_size": "32",
+        "kernel_size": "3",
+        "strides": "2"
+    },
+    "nezami": {
+        "intermediate_activation": "relu",
+        "kernel_size": "3",
+        "start_size": "16",
+        "stride": "2"
+    },
+    "spectral_net": {
+        "start_size": "64",
+        "kernel_size": "3",
+        "strides": "7"
+    },
+    "batch_size": "256",
+    "epochs": "100",
+    "last_activation": "softmax",
+    "kernel_size": "3",
+    "loss": "sparse_categorical_crossentropy",
+    "patch_size": "11",
+    "patch_overlapping": "9",
+    "test_split": "0.2",
+    "validation_split": "0.1"
+}

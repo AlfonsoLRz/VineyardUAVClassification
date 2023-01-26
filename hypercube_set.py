@@ -130,14 +130,15 @@ class HypercubeSet:
 
         return variance / (num_classes - 1)
 
-    def obtain_train_indices(self, test_percentage):
+    def obtain_train_indices(self, test_percentage, patch_size, patch_overlapping):
         """
         Obtains the train indices.
         :param test_percentage: Percentage of the data to be used as test data.
         """
         num_pixels = self._mask.shape[0] * self._mask.shape[1]
         # Remove ground indices from the overall set
-        available_indices = np.setdiff1d(np.arange(num_pixels), self._remove_ground_indices)
+        available_indices = np.setdiff1d(np.arange(0, num_pixels, step=patch_size - patch_overlapping),
+                                         self._remove_ground_indices)
         num_pixels = len(available_indices)
 
         self._train_indices = np.random.choice(available_indices, int(num_pixels * (1.0 - test_percentage)),

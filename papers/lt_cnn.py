@@ -8,7 +8,7 @@ def inception_module(x, num_filters_1, num_filters_2, num_filters_3, num_filters
 
     # Branch 1
     conv_1x1_1 = Conv2D(num_filters_3, kernel_size=(1, 1))(x)
-    conv_3x3_1 = Conv2D(num_filters_4, kernel_size=(3, 3))(conv_1x1_1)
+    conv_3x3_1 = Conv2D(num_filters_4, kernel_size=(3, 3), padding='same')(conv_1x1_1)
     conv_3x3_1_2 = Conv2D(num_filters_4, kernel_size=(3, 3))(conv_3x3_1)
 
     # Branch 2

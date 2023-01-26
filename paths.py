@@ -13,3 +13,6 @@ numpy_binary_extension = ".npy"
 # Train/Test split in system file
 cube_extension = "_cube"
 label_extension = "_label"
+
+# Config
+config_file = 'config.json'

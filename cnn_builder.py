@@ -1,8 +1,11 @@
+import config as cfg
+import ctypes
 import json
 import paths
-import config as cfg
+import randomness
 from config import *
 from papers.allopezr_2d import *
+from papers.allopezr_3d import *
 from papers.aspn import *
 from papers.fsk_net import *
 from papers.hybrid_sn import *
@@ -12,9 +15,15 @@ from papers.lt_cnn import *
 from papers.nezami import *
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.optimizers import Adadelta, SGD, Adam, Adamax, RMSprop
+from tensorflow.python.client import device_lib
 
 # -------------- SUPPORT FUNCTIONS --------------
+
+
+def force_gpu():
+    tf.compat.v1.Session()
+    ctypes.WinDLL("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDNN/v8.6.0/bin/cudnn64_8.dll")
+    tf.debugging.set_log_device_placement(True)
 
 
 def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=10):
@@ -50,8 +59,18 @@ def get_name(network_type):
 # --------------- MODELS ----------------
 
 def get_allopezr_2d(config, img_size, num_classes):
-    model = get_allopezr_2d_model(img_size, num_classes, start_size=config['start_size'], kernel_size=config['kernel_size'],
-                            strides=config['strides'], intermediate_activation=config['intermediate_activation'])
+    model = get_allopezr_2d_model(img_size, num_classes, start_size=config['start_size'],
+                                  kernel_size=config['kernel_size'], strides=config['strides'],
+                                  intermediate_activation=config['intermediate_activation'])
+
+    return model
+
+
+def get_allopezr_3d(config, img_size, num_classes):
+    img_size = (1,) + img_size
+    model = get_allopezr_3d_model(img_size, num_classes, start_size=config['start_size'],
+                                  kernel_size=config['kernel_size'], strides=config['strides'],
+                                  intermediate_activation=config['intermediate_activation'])
 
     return model
 
@@ -108,6 +127,7 @@ def get_spectral_net(config, img_size, num_classes):
 
 dict_model = {
     'allopezr_2d': get_allopezr_2d,
+    'allopezr_3d': get_allopezr_3d,
     'aspn': get_aspn_net,
     'fsk_net': get_fsk_net,
     'hybrid_sn': get_hybrid_sn,
@@ -115,6 +135,10 @@ dict_model = {
     'lt_cnn': get_lt_cnn,
     'nezami_2020': get_nezami_2020,
     'spectral_net': get_spectral_net,
+}
+
+hypertuner = {
+    'allopezr_2d': get_kt_allopezr_2d_model
 }
 
 # ------------ TRAINING & COMPILATION -------------
@@ -154,6 +178,47 @@ def run_model(model, X_train, y_train, callbacks, validation_split=0.1):
 
     return model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,
                      validation_split=validation_split, callbacks=callbacks)
+
+
+def hypertune(X_train, y_train, network_type, model_name, callbacks, validation_split=0.1):
+    """
+    Performs hyperparameter tuning with the given hyperparameters.
+    """
+    if not network_type in hypertuner:
+        print('No hypertuner for network type: {}'.format(network_type))
+        return
+
+    # Create a tuner
+    tuner = kt.Hyperband(
+        hypertuner[network_type],
+        objective='val_loss',
+        max_epochs=epochs,
+        directory=paths.result_folder + 'tuning/' + model_name,
+        project_name=model_name,
+        seed=randomness.random_seed,
+    )
+
+    # Perform the search
+    tuner.search(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=validation_split,
+                 callbacks=callbacks)
+
+    # Get the best hyperparameters
+    best_hps = tuner.get_best_hyperparameters()[0]
+
+    # Show the best hyperparameters
+    print('Best hyperparameters:')
+    print(best_hps.values)
+
+    # Save into file
+    with open(paths.result_folder + 'tuning/' + model_name + '/best_hps.txt', 'w') as f:
+        f.write(str(best_hps.values))
+
+    # Build the model with the best hyperparameters and train it on the data for 50 epochs
+    # model = tuner.hypermodel.build(best_hps)
+    # model.compile(optimizer=training_config[network_type]['optimizer'], loss=loss, metrics=get_metrics(num_classes))
+    #
+    # model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=validation_split,
+    #           callbacks=callbacks)
 
 
 # -------------- System files ----------------

@@ -14,6 +14,7 @@ patch_overlapping = 9
 strides = 2
 test_split = 0.2
 validation_split = 0.1
+num_target_features = 30
 
 
 # Callbacks
@@ -45,7 +46,15 @@ training_config = {
         'callbacks': [],
         'intermediate_activation': 'relu',
         'kernel_size': 3,
-        'start_size': 32,
+        'start_size': 64,
+        'strides': 2,
+    },
+    'allopezr_3d': {
+        'optimizer': RMSprop(learning_rate=0.001),
+        'callbacks': [],
+        'intermediate_activation': 'relu',
+        'kernel_size': 3,
+        'start_size': 64,
         'strides': 2,
     },
     'aspn': {
@@ -72,7 +81,7 @@ training_config = {
         'kernel_size': 13,
     },
     'lt_cnn': {
-        'optimizer': Adam(learning_rate=1e-3, decay=1e-5),
+        'optimizer': Adam(learning_rate=1e-3),
         'callbacks': [LearningRateScheduler(decay_schedule, verbose=1)],
         'start_size': 32,
         'kernel_size': 3,

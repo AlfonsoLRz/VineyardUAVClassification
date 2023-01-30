@@ -4,6 +4,13 @@
         "kernel_size": "3",
         "start_size": "32",
         "strides": "2",
+        "learning_rate": "0.01"
+    },
+    "allopezr_3d": {
+        "intermediate_activation": "relu",
+        "kernel_size": "3",
+        "start_size": "64",
+        "strides": "2",
         "learning_rate": "0.001"
     },
     "aspn": {

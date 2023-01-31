@@ -2,9 +2,8 @@ from config import loss, patch_size, num_target_features
 import keras
 from keras.models import Model
 from keras.layers import Concatenate, BatchNormalization, Input, Dense, Reshape, Activation, Dropout, Conv2D, \
-    LeakyReLU, Flatten, MaxPooling2D
-from keras.optimizers import Adam, SGD, RMSprop
-import keras_tuner as kt
+    LeakyReLU, Flatten, MaxPooling2D, GaussianNoise
+from keras.optimizers import RMSprop
 
 
 def get_residual_block(input, start_size, strides):
@@ -15,13 +14,13 @@ def get_residual_block(input, start_size, strides):
 
 
 def get_inception_module(input, start_size, strides):
-    conv1_a = Conv2D(start_size, (1, 1), strides=strides, padding='same', activation='relu')(input)
+    conv1_a = Conv2D(start_size, (1, 1), strides=1, padding='same', activation='relu')(input)
     conv2_a = Conv2D(start_size, (3, 3), strides=strides, padding='same', activation='relu')(conv1_a)
 
-    conv1_b = Conv2D(start_size, (1, 1), strides=strides, padding='same', activation='relu')(input)
+    conv1_b = Conv2D(start_size, (1, 1), strides=1, padding='same', activation='relu')(input)
     conv2_b = Conv2D(start_size, (5, 5), strides=strides, padding='same', activation='relu')(conv1_b)
 
-    max_pool_c = MaxPooling2D((3, 3), strides=strides, padding='same')(input)
+    max_pool_c = MaxPooling2D((3, 3), strides=1, padding='same')(input)
     conv1_c = Conv2D(start_size, (1, 1), padding='same', strides=strides, activation='relu')(max_pool_c)
 
     output = Concatenate(axis=3)([conv2_a, conv2_b, conv1_c])
@@ -42,15 +41,17 @@ def get_allopezr_2d_model(img_size, num_classes, start_size=32, intermediate_act
     in_patch = Input(shape=img_size)
     #in_pixel = Input(shape=(img_size[2],))
 
-    #x = Conv2D(start_size * 1, 1, strides=strides, padding="same")(in_patch)
-    x = Conv2D(start_size * 2, kernel_size, strides=strides, padding="same")(in_patch)
+    x = Conv2D(start_size * 1, 1, strides=1, padding="same")(in_patch)
+    x = Conv2D(start_size * 1, kernel_size, strides=strides, padding="same")(x)
     x = LeakyReLU(alpha=0.1)(x)
-    x = get_naive_inception_module(x, start_size * 1)
+    x = BatchNormalization()(x)
+    x = Dropout(0.2)(x)
+    x = get_inception_module(x, start_size, strides=strides)
     #x = Conv2D(start_size * 2, kernel_size, strides=strides, padding="same")(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = BatchNormalization()(x)
     x = Dropout(0.4)(x)
-    x = get_naive_inception_module(x, start_size * 1)
+    x = get_naive_inception_module(x, start_size * 2, strides=strides)
     #x = Conv2D(start_size * 4, kernel_size, strides=strides, padding="same")(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = BatchNormalization()(x)
@@ -65,7 +66,6 @@ def get_allopezr_2d_model(img_size, num_classes, start_size=32, intermediate_act
 def get_kt_allopezr_2d_model(hp):
     in_patch = Input(shape=(patch_size, patch_size, num_target_features))
     x = in_patch
-    #in_pixel = Input(shape=(img_size[2],))
 
     conv_1a = hp.Int('conv_1a', min_value=16, max_value=96, step=16)
     conv_2b = hp.Int('conv_2b', min_value=16, max_value=128, step=16)

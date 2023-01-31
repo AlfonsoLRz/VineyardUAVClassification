@@ -4,7 +4,7 @@
         "kernel_size": "3",
         "start_size": "32",
         "strides": "2",
-        "learning_rate": "0.01"
+        "learning_rate": "0.001"
     },
     "allopezr_3d": {
         "intermediate_activation": "relu",
@@ -47,8 +47,8 @@
     "last_activation": "softmax",
     "kernel_size": "3",
     "loss": "sparse_categorical_crossentropy",
-    "patch_size": "11",
-    "patch_overlapping": "9",
+    "patch_size": "20",
+    "patch_overlapping": "16",
     "test_split": "0.2",
     "validation_split": "0.1"
 }

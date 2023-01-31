@@ -49,5 +49,11 @@ network_name = get_name(network_type)
 num_classes = hc_set.get_num_classes()
 img_shape = X_train[0][0].shape
 
-model = hypertune([X_train_augment], y_train_augmented, network_type=network_type, model_name=network_name,
-                  validation_split=validation_split, callbacks=get_callback_list(model_name=network_name))
+model = build_network(network_type=network_type, num_classes=num_classes, image_dim=img_shape)
+compile_network(model, network_type, network_name, num_classes, show_summary=True, render_image=True)
+history = run_model(model, X_train_augment, y_train_augmented, validation_split=validation_split, callbacks=get_callback_list(model_name=network_name))
+
+test_loss, test_accuracy = model.evaluate(X_test, y_test)
+print("Test Loss: " + str(test_loss) + ", Test Accuracy: " + str(test_accuracy))
+
+render_model_history(history, model_name=network_name, accuracy="sparse_categorical_accuracy")

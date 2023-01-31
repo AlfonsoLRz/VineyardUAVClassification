@@ -1,3 +1,5 @@
+import copy
+
 import config as cfg
 import ctypes
 import json
@@ -24,6 +26,14 @@ def force_gpu():
     tf.compat.v1.Session()
     ctypes.WinDLL("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDNN/v8.6.0/bin/cudnn64_8.dll")
     tf.debugging.set_log_device_placement(True)
+
+    max_gpus = len(tf.config.list_physical_devices('GPU'))
+    print('Number of GPUs: {}'.format(max_gpus))
+
+    strategy_gpu = tf.distribute.MirroredStrategy(cross_device_ops=tf.distribute.ReductionToOneDevice())
+    print('Number of devices: {}'.format(strategy_gpu.num_replicas_in_sync))
+
+    return strategy_gpu
 
 
 def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=10):
@@ -157,7 +167,9 @@ def compile_network(model, network_type, model_name, num_classes, show_summary=T
     """
     Compiles the model and shows summary if required.
     """
-    model.compile(optimizer=training_config[network_type]['optimizer'], loss=loss, metrics=get_metrics(num_classes))
+    # Create copy of optimizer
+    optimizer = copy.deepcopy(training_config[network_type]['optimizer'])
+    model.compile(optimizer=optimizer, loss=loss, metrics=get_metrics(num_classes))
 
     if show_summary:
         model.summary()

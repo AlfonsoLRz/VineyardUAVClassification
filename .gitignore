@@ -79,6 +79,7 @@ media/*
 .idea/*
 *.pyc
 *.xml
+results/tuning/*
 
 # Executables
 *.exe

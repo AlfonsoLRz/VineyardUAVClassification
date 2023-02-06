@@ -89,6 +89,9 @@ results/tuning/*
 # Numpy
 *.npy
 
+# Pickle
+*.p
+
 # Keras
 *.h5
 logs/*

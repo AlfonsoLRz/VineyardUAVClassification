@@ -1,3 +1,4 @@
+import cv2
 from enum import Enum
 import math
 import numpy as np
@@ -31,9 +32,9 @@ class Hypercube:
         """
         Calculates a vegetation index.
         """
-        nir_band = np.array(self._hypercube[:, :, self.__search_nearest_layer(self.NIR_WL)])
-        green_band = np.array(self._hypercube[:, :, self.__search_nearest_layer(self.GREEN_WL)])
-        red_band = np.array(self._hypercube[:, :, self.__search_nearest_layer(self.RED_WL)])
+        nir_band = np.array(self._hypercube[:, :, self.__search_nearest_layer(self._bands, self.NIR_WL)])
+        green_band = np.array(self._hypercube[:, :, self.__search_nearest_layer(self._bands, self.GREEN_WL)])
+        red_band = np.array(self._hypercube[:, :, self.__search_nearest_layer(self._bands, self.RED_WL)])
 
         if index == VegetationIndex.NDVI:
             index_factor = (nir_band - red_band) / (nir_band + red_band)
@@ -112,6 +113,15 @@ class Hypercube:
         """
         print(title + 'Min: {}, Max: {}, Size: {}'.format(np.min(self._hypercube), np.max(self._hypercube),
                                                           self._hypercube.shape))
+
+    @staticmethod
+    def save_mask(mask, path):
+        """
+        Saves class mask as .png file.
+        :param mask: Class mask.
+        :param path: Path to save the mask.
+        """
+        cv2.imwrite(path, mask)
 
     @staticmethod
     def __search_nearest_layer(bands, wl):

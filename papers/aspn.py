@@ -1,7 +1,6 @@
 from keras import backend as K
 from keras.models import Model
-from keras.layers import Input, Dense, Reshape, Lambda, Dropout, Layer
-from keras.layers import BatchNormalization
+from keras.layers import Input, Dense, Reshape, Lambda, Dropout, Layer, BatchNormalization
 from keras.initializers import Initializer
 import math
 

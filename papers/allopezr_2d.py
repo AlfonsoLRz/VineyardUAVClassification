@@ -1,9 +1,12 @@
+from papers.aspn import SpatialAttention, SecondOrderPooling, Lambda
 from config import loss, patch_size, num_target_features
 import keras
+from keras import backend as K
 from keras.models import Model
 from keras.layers import Concatenate, BatchNormalization, Input, Dense, Reshape, Activation, Dropout, Conv2D, \
-    LeakyReLU, Flatten, MaxPooling2D, GaussianNoise
+    LeakyReLU, Flatten, MaxPooling2D, GaussianNoise, Lambda
 from keras.optimizers import RMSprop
+from tensorflow.keras import regularizers
 
 
 def get_residual_block(input, start_size, strides):
@@ -20,8 +23,8 @@ def get_inception_module(input, start_size, strides):
     conv1_b = Conv2D(start_size, (1, 1), strides=1, padding='same', activation='relu')(input)
     conv2_b = Conv2D(start_size, (5, 5), strides=strides, padding='same', activation='relu')(conv1_b)
 
-    max_pool_c = MaxPooling2D((3, 3), strides=1, padding='same')(input)
-    conv1_c = Conv2D(start_size, (1, 1), padding='same', strides=strides, activation='relu')(max_pool_c)
+    max_pool_c = MaxPooling2D(strides, padding='same')(input)
+    conv1_c = Conv2D(start_size, (1, 1), padding='same', strides=1, activation='relu')(max_pool_c)
 
     output = Concatenate(axis=3)([conv2_a, conv2_b, conv1_c])
     return output
@@ -40,23 +43,28 @@ def get_allopezr_2d_model(img_size, num_classes, start_size=32, intermediate_act
                           strides=2):
     in_patch = Input(shape=img_size)
     #in_pixel = Input(shape=(img_size[2],))
+    x = in_patch
 
-    x = Conv2D(start_size * 1, 1, strides=1, padding="same")(in_patch)
+    y = Reshape([img_size[0] * img_size[1], img_size[2]])(x)
+    y = Lambda(lambda z: K.l2_normalize(z, axis=-1))(y)
+    y = SpatialAttention()(y)
+    y = Reshape([img_size[0], img_size[1], img_size[2]])(y)
+    x = Concatenate(axis=3)([x, y])
+
+    x = Conv2D(start_size * 1, 1, strides=1, padding="same")(x)
     x = Conv2D(start_size * 1, kernel_size, strides=strides, padding="same")(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = BatchNormalization()(x)
     x = Dropout(0.2)(x)
-    x = get_inception_module(x, start_size, strides=strides)
-    #x = Conv2D(start_size * 2, kernel_size, strides=strides, padding="same")(x)
-    x = LeakyReLU(alpha=0.1)(x)
+    x = get_inception_module(x, start_size * 2, strides=strides)
     x = BatchNormalization()(x)
+    x = LeakyReLU(alpha=0.1)(x)
     x = Dropout(0.4)(x)
-    x = get_naive_inception_module(x, start_size * 2, strides=strides)
-    #x = Conv2D(start_size * 4, kernel_size, strides=strides, padding="same")(x)
-    x = LeakyReLU(alpha=0.1)(x)
+    x = get_naive_inception_module(x, start_size * 6, strides=strides)
     x = BatchNormalization()(x)
+    x = LeakyReLU(alpha=0.1)(x)
     x = Flatten()(x)
-    x = Dropout(0.1)(x)
+    x = Dropout(0.2)(x)
     outputs = Dense(num_classes, activation="softmax")(x)
     model = Model([in_patch], outputs)
 

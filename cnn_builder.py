@@ -36,7 +36,9 @@ def force_gpu():
     return strategy_gpu
 
 
-def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=10):
+def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=20):
+    time_callback = TimeCallback()
+
     return [
         tf.keras.callbacks.TensorBoard(log_dir='./logs'),
         keras.callbacks.EarlyStopping(
@@ -51,8 +53,8 @@ def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_acc
             save_best_only=True,
             verbose=1
         ),
-        TimeCallback(),
-    ]
+        time_callback
+    ], time_callback
 
 
 def get_metrics(num_classes):
@@ -62,7 +64,7 @@ def get_metrics(num_classes):
 
 
 def get_name(network_type):
-    return network_type + '_' + str(patch_size) + 'x' + str(patch_overlapping) + '_' + \
+    return network_type + '_' + str(cfg.patch_size) + 'x' + str(cfg.patch_overlapping) + '_' + \
            str(training_config[network_type]['start_size'])
 
 
@@ -175,8 +177,8 @@ def compile_network(model, network_type, model_name, num_classes, show_summary=T
         model.summary()
 
     if render_image:
-        tf.keras.utils.plot_model(model, to_file=paths.result_folder + model_name + '.png', show_shapes=True,
-                                  show_layer_names=True)
+        tf.keras.utils.plot_model(model, to_file=paths.result_folder + 'summary/' + model_name + '.png',
+                                  show_shapes=True, show_layer_names=False)
 
     return model
 
@@ -186,9 +188,9 @@ def run_model(model, X_train, y_train, callbacks, validation_split=0.1):
     Fits the model with X_train and y_train.
     """
 
-    print('Training for {} epochs with batch size of {}...'.format(epochs, batch_size))
+    print('Training for {} epochs with batch size of {}...'.format(cfg.epochs, cfg.batch_size))
 
-    return model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size,
+    return model.fit(X_train, y_train, epochs=cfg.epochs, batch_size=cfg.batch_size,
                      validation_split=validation_split, callbacks=callbacks)
 
 
@@ -237,20 +239,29 @@ def hypertune(X_train, y_train, network_type, model_name, callbacks, validation_
 def read_json_config(path, network_type):
     with open(path, 'r') as f:
         data_params = json.load(f)
-        if network_type not in data_params:
-            raise ValueError('Unknown network type: {}'.format(network_type))
-
-        network_config = data_params[network_type]
-        if 'start_size' in network_config:
-            training_config[network_type]['start_size'] = int(network_config['start_size'])
-        if 'kernel_size' in network_config:
-            training_config[network_type]['kernel_size'] = int(network_config['kernel_size'])
-        if 'strides' in network_config:
-            training_config[network_type]['strides'] = int(network_config['strides'])
-        if 'intermediate_activation' in network_config:
-            training_config[network_type]['intermediate_activation'] = network_config['intermediate_activation']
-        if 'learning_rate' in network_config and 'optimizer' in training_config[network_type]:
-            training_config[network_type]['optimizer'].learning_rate = float(network_config['learning_rate'])
+        if network_type in data_params:
+            network_config = data_params[network_type]
+            if 'start_size' in network_config:
+                training_config[network_type]['start_size'] = int(network_config['start_size'])
+            if 'kernel_size' in network_config:
+                training_config[network_type]['kernel_size'] = int(network_config['kernel_size'])
+            if 'strides' in network_config:
+                training_config[network_type]['strides'] = int(network_config['strides'])
+            if 'intermediate_activation' in network_config:
+                training_config[network_type]['intermediate_activation'] = network_config['intermediate_activation']
+            if 'optimizer' in network_config:
+                if network_config['optimizer'] == 'adam':
+                    training_config[network_type]['optimizer'] = tf.keras.optimizers.Adam()
+                elif network_config['optimizer'] == 'sgd':
+                    training_config[network_type]['optimizer'] = tf.keras.optimizers.SGD()
+                elif network_config['optimizer'] == 'rmsprop':
+                    training_config[network_type]['optimizer'] = tf.keras.optimizers.RMSprop()
+            if 'learning_rate' in network_config and 'optimizer' in training_config[network_type]:
+                training_config[network_type]['optimizer'].learning_rate = float(network_config['learning_rate'])
+            if 'decay' in network_config and 'optimizer' in training_config[network_type]:
+                training_config[network_type]['optimizer'].decay = float(network_config['decay'])
+            if 'momentum' in network_config and 'optimizer' in training_config[network_type]:
+                training_config[network_type]['optimizer'].momentum = float(network_config['momentum'])
 
         if 'batch_size' in data_params:
             cfg.batch_size = int(data_params['batch_size'])

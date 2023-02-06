@@ -1,6 +1,7 @@
 from alive_progress import alive_bar
 from enum import Enum
 import hypercube as hc
+import randomness
 from randomness import *
 from rendering import *
 from sklearn.decomposition import FactorAnalysis, NMF, PCA, TruncatedSVD
@@ -90,6 +91,19 @@ class HypercubeSet:
 
         del hc_array
 
+    def compose_swath_evaluation(self, y_label, prediction, patch_size):
+        if patch_size % 2 == 0:
+            patch_size += 1
+        swath_shape = self._hypercube_shapes[0]
+        swath_shape = (swath_shape[0] - patch_size, swath_shape[1] - patch_size)
+
+        shaped_label = np.reshape(y_label, swath_shape)
+        shaped_prediction = np.reshape(prediction, swath_shape)
+        diff = np.abs(shaped_label - shaped_prediction)
+        diff[diff > 0] = 1
+
+        return diff
+
     def flatten(self):
         """
         Turns a 3D hypercube into a 2D vector for preprocessing such as matrix factorization.
@@ -160,6 +174,7 @@ class HypercubeSet:
         ground_indices = np.where(mask == 0)[0]
         del mask
         num_removable_indices = len(ground_indices) - max_vegetation_samples
+        np.random.seed(randomness.random_seed)
         self._remove_ground_indices = np.random.choice(ground_indices, num_removable_indices, replace=False)
 
     def plot(self, plot_hc=True, plot_mask=True):
@@ -237,19 +252,32 @@ class HypercubeSet:
         train_indices = self._train_indices[:max_train_samples]
         self._train_indices = self._train_indices[max_train_samples:]
 
-        return self.__split_indices(train_indices, patch_size)
+        return self.__split_indices(train_indices, patch_size, self._hypercube.shape)
+
+    def split_swath(self, patch_size, patch_id=0, limit=None, offset=0):
+        swath_shape = self._hypercube_shapes[patch_id]
+        num_pixels = swath_shape[0] * swath_shape[1]
+
+        if patch_id < len(self._hypercube_shapes) and offset < num_pixels:
+            if limit is not None:
+                num_pixels = min(min(num_pixels, limit), num_pixels - offset)
+            available_indices = np.arange(num_pixels * patch_id + offset, num_pixels * patch_id + offset + num_pixels,
+                                          step=1)
+
+            return self.__split_indices(available_indices, patch_size, swath_shape)
+
+        return None, None
 
     def split_test(self, patch_size):
         """
         Splits the hypercube into test patches.
         """
-        return self.__split_indices(self._test_indices, patch_size)
+        return self.__split_indices(self._test_indices, patch_size, self._hypercube.shape)
 
-    def __split_indices(self, indices, patch_size):
+    def __split_indices(self, indices, patch_size, big_hypercube_shape):
         patch = []
         label = []
         hypercube_shape = self._hypercube_shapes[0]
-        big_hypercube_shape = self._hypercube.shape
         num_train_samples = indices.shape[0]
         half_patch_size = patch_size // 2
 

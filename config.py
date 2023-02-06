@@ -5,7 +5,7 @@ import time
 
 # Global config
 batch_size = 256
-epochs = 100
+epochs = 5
 last_activation = 'softmax'
 kernel_size = 3
 loss = 'sparse_categorical_crossentropy'
@@ -38,11 +38,12 @@ class TimeCallback(Callback):
 
     def on_train_end(self, logs=None):
         self.duration = time.time() - self.timestamp
+        print("Training took {} seconds".format(self.duration))
 
 
 training_config = {
     'allopezr_2d': {
-        'optimizer': RMSprop(learning_rate=0.001),
+        'optimizer': Adam(learning_rate=1e-3),
         'callbacks': [],
         'intermediate_activation': 'relu',
         'kernel_size': 3,

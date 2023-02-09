@@ -36,7 +36,7 @@ def force_gpu():
     return strategy_gpu
 
 
-def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=20):
+def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=20, test_id=0):
     time_callback = TimeCallback()
 
     return [
@@ -48,7 +48,7 @@ def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_acc
             mode='auto'
         ),
         keras.callbacks.ModelCheckpoint(
-            filepath=paths.result_folder + 'network/' + model_name + '.h5',
+            filepath=paths.result_folder + 'network/' + model_name + "_" + str(test_id) + '.h5',
             monitor='val_loss',
             save_best_only=True,
             verbose=1
@@ -122,12 +122,8 @@ def get_lt_cnn(config, img_size, num_classes):
     return model
 
 
-def get_nezami_2020(config, img_size, num_classes):
-    input_shape = img_size + (1,)
-
-    return get_nezami_model(input_shape, num_classes, start_size=config['start_size'],
-                            intermediate_activation=config['intermediate_activation'],
-                            kernel_size=config['kernel_size'], strides=config['strides'])
+def get_nezami(config, img_size, num_classes):
+    return get_nezami_model(img_size, num_classes)
 
 
 def get_spectral_net(config, img_size, num_classes):
@@ -145,7 +141,7 @@ dict_model = {
     'hybrid_sn': get_hybrid_sn,
     'jigsaw_hsi': get_jigsaw_hsi,
     'lt_cnn': get_lt_cnn,
-    'nezami_2020': get_nezami_2020,
+    'nezami': get_nezami,
     'spectral_net': get_spectral_net,
 }
 
@@ -179,6 +175,18 @@ def compile_network(model, network_type, model_name, num_classes, show_summary=T
     if render_image:
         tf.keras.utils.plot_model(model, to_file=paths.result_folder + 'summary/' + model_name + '.png',
                                   show_shapes=True, show_layer_names=False)
+
+    return model
+
+
+def load_model(network_type, model_name, num_classes, image_dim, show_summary=True, render_image=False):
+    """
+    Loads the model from the given path.
+    """
+    model = build_network(network_type, num_classes, image_dim)
+    model = compile_network(model, network_type, model_name, num_classes, show_summary, render_image)
+
+    model.load_weights(paths.result_folder + 'network/' + model_name + '.h5')
 
     return model
 
@@ -239,6 +247,24 @@ def hypertune(X_train, y_train, network_type, model_name, callbacks, validation_
 def read_json_config(path, network_type):
     with open(path, 'r') as f:
         data_params = json.load(f)
+
+        if 'batch_size' in data_params:
+            cfg.batch_size = int(data_params['batch_size'])
+        if 'epochs' in data_params:
+            cfg.epochs = int(data_params['epochs'])
+        if 'loss' in data_params:
+            cfg.loss = data_params['loss']
+        if 'last_activation' in data_params:
+            cfg.last_activation = data_params['last_activation']
+        if 'patch_size' in data_params:
+            cfg.patch_size = int(data_params['patch_size'])
+        if 'patch_overlapping' in data_params:
+            cfg.patch_overlapping = int(data_params['patch_overlapping'])
+        if 'test_split' in data_params:
+            cfg.test_split = float(data_params['test_split'])
+        if 'validation_split' in data_params:
+            cfg.validation_split = float(data_params['validation_split'])
+
         if network_type in data_params:
             network_config = data_params[network_type]
             if 'start_size' in network_config:
@@ -263,19 +289,7 @@ def read_json_config(path, network_type):
             if 'momentum' in network_config and 'optimizer' in training_config[network_type]:
                 training_config[network_type]['optimizer'].momentum = float(network_config['momentum'])
 
-        if 'batch_size' in data_params:
-            cfg.batch_size = int(data_params['batch_size'])
-        if 'epochs' in data_params:
-            cfg.epochs = int(data_params['epochs'])
-        if 'loss' in data_params:
-            cfg.loss = data_params['loss']
-        if 'last_activation' in data_params:
-            cfg.last_activation = data_params['last_activation']
-        if 'patch_size' in data_params:
-            cfg.patch_size = int(data_params['patch_size'])
-        if 'patch_overlapping' in data_params:
-            cfg.patch_overlapping = int(data_params['patch_overlapping'])
-        if 'test_split' in data_params:
-            cfg.test_split = float(data_params['test_split'])
-        if 'validation_split' in data_params:
-            cfg.validation_split = float(data_params['validation_split'])
+            if 'patch_size' in network_config:
+                cfg.patch_size = int(network_config['patch_size'])
+            if 'patch_overlapping' in network_config:
+                cfg.patch_overlapping = int(network_config['patch_overlapping'])

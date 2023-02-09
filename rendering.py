@@ -14,7 +14,7 @@ def get_plot_fonts():
     font = 'Adobe Devanagari'
     title_font = {'fontname': font, 'size': 13}
     regular_font = {'fontname': font}
-    font = font_manager.FontProperties(family=font, size=12)
+    font = font_manager.FontProperties(family=font, size=11)
 
     return font, title_font, regular_font
 
@@ -33,7 +33,7 @@ def render_confusion_matrix(y_test, y_pred):
     # sn.heatmap(df_cm, annot=True, annot_kws={"size": 10}, cmap='Blues', fmt='g')
     # sns.heatmap(cmn, annot=True, fmt='.2f', xticklabels=target_names, yticklabels=target_names)
 
-    sns.heatmap(cmn, annot=True, fmt='.2f', cmap='magma')
+    sns.heatmap(cmn, annot=True, fmt='.2f', cmap='Blues')
     plt.ylabel('Actual')
     plt.xlabel('Predicted')
     plt.savefig(paths.result_folder + 'ConfusionMatrix.png')
@@ -194,7 +194,7 @@ def render_patch_augmentation(patches):
         ax.yaxis.set_ticks_position('none')
 
     plt.tight_layout()
-    plt.subplots_adjust(top=0.99, bottom=0.01, hspace=.1, wspace=0.02)
+    plt.subplots_adjust(top=0.99, bottom=0.01, hspace=.1, wspace=0.08)
     plt.savefig(paths.result_folder + "patch_augmentation.png", dpi=300, transparent=True)
 
 
@@ -235,9 +235,9 @@ def render_patches_examples(original_patches, standard_patches, labels, reduced_
         ax1.imshow(get_rgb_chunk(original_patches[patch_idx]), cmap='gray')
         ax2.imshow(get_rgb_mask(labels[patch_idx][:, :], max_labels=np.max(reduced_labels)))
         plot_patch_variance(original_patches[patch_idx], patch_labels=labels[patch_idx], axis=ax3, multiplier=1.0,
-                            alpha_variance=0.3, xtick_step=60)
+                            alpha_variance=0.15, xtick_step=60)
         plot_patch_variance(standard_patches[patch_idx], patch_labels=labels[patch_idx], axis=ax4, multiplier=1.0,
-                            alpha_variance=0.3, xtick_step=10)
+                            alpha_variance=0.15, xtick_step=10)
 
         ax1.set_ylabel(ylabel="Class " + str(label), **title_font)
         if idx == 0:

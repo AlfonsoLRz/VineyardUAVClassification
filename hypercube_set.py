@@ -159,6 +159,9 @@ class HypercubeSet:
                                                replace=False)
         self._test_indices = np.setdiff1d(available_indices, self._train_indices)
 
+        print(self._train_indices)
+        print(self._test_indices)
+
     def obtain_ground_labels(self):
         """
         Removes the ground labels from the hypercube set.
@@ -240,7 +243,7 @@ class HypercubeSet:
         render_hc_spectrum_label(self._hypercube, self._mask)
         self._to_3d(threed_shape)
 
-    def split_train(self, patch_size, max_train_samples=None):
+    def split_train(self, patch_size, max_train_samples=None, remove=True, starting_index=0):
         """
         Splits the hypercube set into train and test sets.
         """
@@ -249,8 +252,9 @@ class HypercubeSet:
         else:
             max_train_samples = min(max_train_samples, self._train_indices.shape[0])
 
-        train_indices = self._train_indices[:max_train_samples]
-        self._train_indices = self._train_indices[max_train_samples:]
+        train_indices = self._train_indices[starting_index:starting_index + max_train_samples]
+        if remove:
+            self._train_indices = self._train_indices[starting_index + max_train_samples:]
 
         return self.__split_indices(train_indices, patch_size, self._hypercube.shape)
 

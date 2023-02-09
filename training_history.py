@@ -16,8 +16,9 @@ class TrainingHistory:
         self._epoch_marks = []
         self._accuracy_name = accuracy_name
         self._training_time = 0
+        self._num_samples = 0
 
-    def append_history(self, history, training_callback=None):
+    def append_history(self, history, training_callback=None, samples=None):
         """
         Append the history of a model to the training history.
         :param history: New training history.
@@ -32,6 +33,11 @@ class TrainingHistory:
 
         if training_callback is not None:
             self._training_time += training_callback.duration
+
+        if samples is not None:
+            self._num_samples += samples.shape[0]
+
+        print("Samples: " + str(self._num_samples) + ", Time: " + str(self._training_time))
 
     def get_accuracy_key(self):
         """
@@ -53,6 +59,14 @@ class TrainingHistory:
         :return: Length of training history.
         """
         return len(self._history['val_loss'])
+
+    @staticmethod
+    def load(model_name):
+        """
+        Load the training history from file.
+        :param model_name: Name of model.
+        """
+        return pickle.load(open(paths.result_folder + 'history/' + model_name + '.p', 'rb'))
 
     def save(self, model_name):
         """

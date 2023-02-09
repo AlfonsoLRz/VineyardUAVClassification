@@ -5,14 +5,9 @@
         "start_size": "16",
         "strides": "2",
         "optimizer": "rmsprop",
-        "learning_rate": "0.001"
-    },
-    "allopezr_3d": {
-        "intermediate_activation": "relu",
-        "kernel_size": "3",
-        "start_size": "64",
-        "strides": "2",
-        "learning_rate": "0.001"
+        "learning_rate": "0.001",
+        "patch_size": "21",
+        "patch_overlapping": "20"
     },
     "aspn": {
         "start_size": "32"
@@ -35,8 +30,10 @@
     "nezami": {
         "intermediate_activation": "relu",
         "kernel_size": "3",
-        "start_size": "16",
-        "stride": "2"
+        "start_size": "20",
+        "stride": "2",
+        "patch_size": "25",
+        "patch_overlapping": "24"
     },
     "spectral_net": {
         "start_size": "64",
@@ -44,7 +41,7 @@
         "strides": "7"
     },
     "batch_size": "512",
-    "epochs": "5",
+    "epochs": "1",
     "last_activation": "softmax",
     "kernel_size": "3",
     "loss": "sparse_categorical_crossentropy",

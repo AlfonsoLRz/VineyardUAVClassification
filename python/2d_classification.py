@@ -1,7 +1,9 @@
 import config
+import paths
 from cnn_builder import *
 from config import *
 from dataset_functions import *
+import gc
 from hypercube_set import HypercubeSet
 from hypercube_loader import *
 import training_history
@@ -25,17 +27,28 @@ if gpus:
         print(e)
 
 inf = 2e32
-max_samples = 50000
+max_samples = 100000
 metrics = training_metrics.TrainingMetrics()
-num_tests = 5
+num_tests = 3
+sampling_strategy = 'not minority'
+if paths.target_area == 2:
+    sampling_strategy = 'majority'
 
-network_type = 'allopezr_2d'
+network_type = 'fsk_net'
 read_json_config(paths.config_file, network_type=network_type)
 network_name = get_name(network_type)
 
 #### Hypercube reading
 hc_set = HypercubeSet(hc_array=load_hypercubes(plot_hc=False, plot_mask=True, n_max_cubes=inf))
 hc_set.print_metadata()
+
+#### Dataset creation
+hc_set.obtain_ground_labels()
+hc_set.obtain_train_indices(test_percentage=test_split, patch_size=config.patch_size,
+                            patch_overlapping=config.patch_overlapping)
+
+#### Preprocessing
+hc_set.standardize(num_features=config.num_target_features, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS)
 
 #### Build network
 num_classes = hc_set.get_num_classes()
@@ -45,41 +58,33 @@ model = build_network(network_type=network_type, num_classes=num_classes, image_
 compile_network(model, network_type, network_name, num_classes, show_summary=True, render_image=True)
 model.save_weights(network_name + "_init.h5")
 
+### Split test
+X_test, y_test = hc_set.split_test(patch_size=config.patch_size)
+y_test = reduce_labels_center(y_test)
+(X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False,
+                                         strategy=sampling_strategy)
+
 for i in range(num_tests):
     print("Test " + str(i+1) + "/" + str(num_tests))
     print("---------------------------------")
 
     ### Restore weights
     model.load_weights(network_name + "_init.h5")
-
-    #### Hypercube reading
-    hc_set = HypercubeSet(hc_array=load_hypercubes(plot_hc=False, plot_mask=True, n_max_cubes=inf))
-    hc_set.print_metadata()
-
-    #### Dataset creation
-    hc_set.obtain_ground_labels()
-    hc_set.obtain_train_indices(test_percentage=test_split, patch_size=config.patch_size,
-                                patch_overlapping=config.patch_size-1)
+    starting_index = 0
 
     history = training_history.TrainingHistory(accuracy_name='sparse_categorical_accuracy')
     callbacks, time_callback = get_callback_list(model_name=network_name, test_id=i)
 
-    #### Preprocessing
-    hc_set.standardize()
-
-    ### Split test
-    X_test, y_test = hc_set.split_test(patch_size=config.patch_size)
-    y_test = reduce_labels_center(y_test)
-    (X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False)
-
     #### Training
     while True:
-        X_train, y_train = hc_set.split_train(patch_size=config.patch_size, max_train_samples=max_samples)
+        X_train, y_train = hc_set.split_train(patch_size=config.patch_size, max_train_samples=max_samples,
+                                              starting_index=starting_index, remove=False)
 
         if len(X_train) > 0:
             y_train = reduce_labels_center(y_train)
-            (patch, patch_label), rest_patch, rest_label = balance_classes(X_train, y_train, reduce=True, clustering=False)
-            (rest_patch, rest_label), _, _ = balance_classes(rest_patch, rest_label, reduce=True, clustering=False)
+            (patch, patch_label), rest_patch, rest_label = balance_classes(X_train, y_train, reduce=True,
+                                                                           clustering=False, strategy=sampling_strategy)
+            #(rest_patch, rest_label), _, _ = balance_classes(rest_patch, rest_label, reduce=True, clustering=False)
 
             X_train, y_train = [], []
             X_train.append(patch)
@@ -90,8 +95,17 @@ for i in range(num_tests):
                 history.append_history(run_model(model, X_train_augment, y_train_augmented,
                                                  validation_split=validation_split, callbacks=callbacks).history,
                                        training_callback=time_callback, samples=X_train_augment)
+
+                del X_train_augment, y_train_augmented
+
+            del patch, patch_label, rest_patch, rest_label
         else:
             break
+
+        del X_train, y_train
+        starting_index += max_samples
+
+        gc.collect()
 
     test_prediction_prob = model.predict(X_test)
     test_prediction = np.argmax(test_prediction_prob, axis=1)

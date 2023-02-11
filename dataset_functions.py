@@ -31,20 +31,20 @@ def augment_chunk(img):
     return img, np.fliplr(img), np.flipud(img), np.rot90(img, k=1, axes=(0, 1)), np.rot90(img, k=3, axes=(0, 1))
 
 
-def balance_classes(patch, label, smote=True, clustering=True, reduce=False):
+def balance_classes(patch, label, smote=True, clustering=True, reduce=False, strategy='not minority'):
     """
     Balance the classes either by downsampling or upsampling.
     """
     if reduce:
         if clustering:
-            sm = ClusterCentroids(sampling_strategy='not minority', random_state=random_seed)
+            sm = ClusterCentroids(sampling_strategy=strategy, random_state=random_seed)
         else:
-            sm = RandomUnderSampler(sampling_strategy='not minority', random_state=random_seed)
+            sm = RandomUnderSampler(sampling_strategy=strategy, random_state=random_seed)
     else:
         if smote:
-            sm = SMOTE(sampling_strategy='not majority', random_state=random_seed)
+            sm = SMOTE(sampling_strategy=strategy, random_state=random_seed)
         else:
-            sm = RandomOverSampler(sampling_strategy='not majority', random_state=random_seed)
+            sm = RandomOverSampler(sampling_strategy=strategy, random_state=random_seed)
 
     sample_shape = patch[0].shape
     shape_length = 1

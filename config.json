@@ -13,14 +13,24 @@
         "start_size": "32"
     },
     "fsk_net": {
-        "start_size": "16"
+        "start_size": "16",
+        "num_target_features": 30,
+        "patch_size": "19",
+        "patch_overlapping": "18",
+        "optimizer": "rmsprop",
+        "learning_rate": "0.0003"
     },
     "hybrid_sn": {
         "start_size": "8"
     },
     "jigsaw_hsi": {
         "kernel_size": "13",
-        "start_size": "4"
+        "start_size": "9",
+        "num_target_features": 9,
+        "patch_size": "25",
+        "patch_overlapping": "15",
+        "optimizer": "adam",
+        "learning_rate": "0.01"
     },
     "lt_cnn": {
         "start_size": "32",
@@ -41,7 +51,7 @@
         "strides": "7"
     },
     "batch_size": "512",
-    "epochs": "1",
+    "epochs": "100",
     "last_activation": "softmax",
     "kernel_size": "3",
     "loss": "sparse_categorical_crossentropy",

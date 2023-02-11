@@ -159,9 +159,6 @@ class HypercubeSet:
                                                replace=False)
         self._test_indices = np.setdiff1d(available_indices, self._train_indices)
 
-        print(self._train_indices)
-        print(self._test_indices)
-
     def obtain_ground_labels(self):
         """
         Removes the ground labels from the hypercube set.

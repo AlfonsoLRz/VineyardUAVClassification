@@ -109,8 +109,7 @@ def get_hybrid_sn(config, img_size, num_classes):
 
 def get_jigsaw_hsi(config, img_size, num_classes):
     input_shape = img_size + (1,)
-    model = build_jigsaw_hsi(input_shape, num_classes=num_classes, crop=True, start_size=config['start_size'],
-                             kernel_size=config['kernel_size'])
+    model = build_jigsaw_hsi(input_shape, num_classes=num_classes, crop=True, kernel_size=config['kernel_size'])
 
     return model
 
@@ -289,6 +288,8 @@ def read_json_config(path, network_type):
             if 'momentum' in network_config and 'optimizer' in training_config[network_type]:
                 training_config[network_type]['optimizer'].momentum = float(network_config['momentum'])
 
+            if 'num_target_features' in network_config:
+                cfg.num_target_features = int(network_config['num_target_features'])
             if 'patch_size' in network_config:
                 cfg.patch_size = int(network_config['patch_size'])
             if 'patch_overlapping' in network_config:

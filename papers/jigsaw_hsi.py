@@ -13,44 +13,44 @@ def jigsaw_m2(input_net, internal_size=13):
     # Creates internal filters as Inception: 1x1, 3x3, 5x5 ..., nxn
     # Where n = internal_size
 
-    jigsaw_t1_3x3_reduce = Conv2D(16, (1, 1), padding='same', activation='relu', kernel_regularizer=l2(L2),
+    jigsaw_t1_3x3_reduce = Conv2D(96, (1, 1), padding='same', activation='relu', kernel_regularizer=l2(L2),
                                   activity_regularizer=act_reg)(input_net)
-    jigsaw_t1_3x3 = Conv2D(64, (3, 3), padding='same', activation='relu', kernel_regularizer=l2(L2),
+    jigsaw_t1_3x3 = Conv2D(128, (3, 3), padding='same', activation='relu', kernel_regularizer=l2(L2),
                            activity_regularizer=act_reg)(jigsaw_t1_3x3_reduce)  # , name="i_3x3"
 
     if internal_size >= 5:
         jigsaw_t1_5x5_reduce = Conv2D(16, (1, 1), padding='same', activation='relu',
                                       kernel_regularizer=l2(L2),
                                       activity_regularizer=act_reg)(input_net)
-        jigsaw_t1_5x5 = Conv2D(16, (5, 5), padding='same', activation='relu',
+        jigsaw_t1_5x5 = Conv2D(128, (5, 5), padding='same', activation='relu',
                                kernel_regularizer=l2(L2),
                                activity_regularizer=act_reg)(jigsaw_t1_5x5_reduce)  # , name="i_5x5"
     if internal_size >= 7:
         jigsaw_t1_7x7_reduce = Conv2D(16, (1, 1), padding='same', activation='relu',
                                       kernel_regularizer=l2(L2),
                                       activity_regularizer=act_reg)(input_net)
-        jigsaw_t1_7x7 = Conv2D(16, (7, 7), padding='same', activation='relu',
+        jigsaw_t1_7x7 = Conv2D(128, (7, 7), padding='same', activation='relu',
                                kernel_regularizer=l2(L2),
                                activity_regularizer=act_reg)(jigsaw_t1_7x7_reduce)  # , name="i_7x7"
     if internal_size >= 9:
         jigsaw_t1_9x9_reduce = Conv2D(16, (1, 1), padding='same', activation='relu',
                                       kernel_regularizer=l2(L2),
                                       activity_regularizer=act_reg)(input_net)
-        jigsaw_t1_9x9 = Conv2D(16, (9, 9), padding='same', activation='relu',
+        jigsaw_t1_9x9 = Conv2D(64, (9, 9), padding='same', activation='relu',
                                kernel_regularizer=l2(L2),
                                activity_regularizer=act_reg)(jigsaw_t1_9x9_reduce)  # , name="i_9x9"
     if internal_size >= 11:
         jigsaw_t1_11x11_reduce = Conv2D(16, (1, 1), padding='same', activation='relu',
                                         kernel_regularizer=l2(L2),
                                         activity_regularizer=act_reg)(input_net)
-        jigsaw_t1_11x11 = Conv2D(16, (11, 11), padding='same', activation='relu',
+        jigsaw_t1_11x11 = Conv2D(64, (11, 11), padding='same', activation='relu',
                                  kernel_regularizer=l2(L2),
                                  activity_regularizer=act_reg)(jigsaw_t1_11x11_reduce)  # , name="i_11x11"
     if internal_size >= 13:
         jigsaw_t1_13x13_reduce = Conv2D(16, (1, 1), padding='same', activation='relu',
                                         kernel_regularizer=l2(L2),
                                         activity_regularizer=act_reg)(input_net)
-        jigsaw_t1_13x13 = Conv2D(16, (13, 13), padding='same', activation='relu',
+        jigsaw_t1_13x13 = Conv2D(64, (13, 13), padding='same', activation='relu',
                                  kernel_regularizer=l2(L2),
                                  activity_regularizer=act_reg)(jigsaw_t1_13x13_reduce)  # , name="i_13x13"
 
@@ -74,7 +74,7 @@ def jigsaw_m2(input_net, internal_size=13):
         jigsaw_list.append(jigsaw_t1_13x13)
 
     # Add Conv1D
-    jigsaw_t1_first = Conv2D(32, (1, 1), padding='same', activation='relu',
+    jigsaw_t1_first = Conv2D(96, (1, 1), padding='same', activation='relu',
                              kernel_regularizer=l2(L2),
                              activity_regularizer=act_reg)(input_net)
     jigsaw_list.append(jigsaw_t1_first)
@@ -144,7 +144,7 @@ def build_jigsaw_hsi(img_size, num_classes, kernel_size=13, start_size=None, cro
         # conv1 = Reshape((my_input_shape[1], my_input_shape[2], my_input_shape[3]*my_input_shape[4]))(my_input)
         conv1 = conv1
     else:
-        conv1 = Conv2D(start_size, (1, 1), padding='same', activation='relu', kernel_regularizer=l2(L2),
+        conv1 = Conv2D(256, (1, 1), padding='same', activation='relu', kernel_regularizer=l2(L2),
                        name='spectral_filter')(conv1)
 
     # Module B

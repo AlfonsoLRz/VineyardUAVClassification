@@ -58,7 +58,7 @@ def transition_block(x, reduction, name):
     return x
 
 
-def get_fsk_model(img_size, num_classes, start_size=32):
+def get_fsk_model(img_size, num_classes, start_size=16):
     if len(img_size) != 4:
         raise Exception("Input shape should be a tuple (nb_channels, kernel_dim1, kernel_dim2, kernel_dim3)")
 

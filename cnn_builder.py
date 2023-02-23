@@ -1,6 +1,5 @@
-import copy
-
 import config as cfg
+import copy
 import ctypes
 import json
 import paths
@@ -109,7 +108,9 @@ def get_hybrid_sn(config, img_size, num_classes):
 
 def get_jigsaw_hsi(config, img_size, num_classes):
     input_shape = img_size + (1,)
-    model = build_jigsaw_hsi(input_shape, num_classes=num_classes, crop=True, kernel_size=config['kernel_size'])
+    config_dict = training_config['jigsaw_hsi']
+    model = build_jigsaw_hsi(input_shape, num_classes=num_classes, crop=True, kernel_size=config_dict['kernel_size'],
+                             start_size=config_dict['start_size'])
 
     return model
 
@@ -281,6 +282,8 @@ def read_json_config(path, network_type):
                     training_config[network_type]['optimizer'] = tf.keras.optimizers.SGD()
                 elif network_config['optimizer'] == 'rmsprop':
                     training_config[network_type]['optimizer'] = tf.keras.optimizers.RMSprop()
+                elif network_config['optimizer'] == 'adadelta':
+                    training_config[network_type]['optimizer'] = tf.keras.optimizers.Adadelta()
             if 'learning_rate' in network_config and 'optimizer' in training_config[network_type]:
                 training_config[network_type]['optimizer'].learning_rate = float(network_config['learning_rate'])
             if 'decay' in network_config and 'optimizer' in training_config[network_type]:

@@ -6,6 +6,7 @@ from dataset_functions import *
 import gc
 from hypercube_set import HypercubeSet
 from hypercube_loader import *
+import numpy as np
 import training_history
 import training_metrics
 
@@ -27,64 +28,59 @@ if gpus:
         print(e)
 
 inf = 2e32
-max_samples = 100000
-metrics = training_metrics.TrainingMetrics()
-num_tests = 5
+max_samples = 50000
 sampling_strategy = 'not minority'
 if paths.target_area == 2:
     sampling_strategy = 'majority'
 
 network_type = 'allopezr_2d'
 read_json_config(paths.config_file, network_type=network_type)
-network_name = get_name(network_type)
 
-#### Hypercube reading
-hc_set = HypercubeSet(hc_array=load_hypercubes(plot_hc=False, plot_mask=True, n_max_cubes=inf))
-hc_set.print_metadata()
+for patch_size in np.arange(31, 33, 2):
+    config.patch_size = patch_size
+    config.patch_overlapping = patch_size - 1
 
-#### Dataset creation
-hc_set.obtain_ground_labels()
-hc_set.obtain_train_indices(test_percentage=test_split, patch_size=config.patch_size,
-                            patch_overlapping=config.patch_overlapping)
+    #### Hypercube reading
+    hc_set = HypercubeSet(hc_array=load_hypercubes(plot_hc=False, plot_mask=True, n_max_cubes=inf))
+    hc_set.print_metadata()
 
-#### Preprocessing
-hc_set.standardize(num_features=config.num_target_features, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS)
+    #### Dataset creation
+    hc_set.obtain_ground_labels()
+    hc_set.obtain_train_indices(test_percentage=test_split, patch_size=config.patch_size,
+                                patch_overlapping=config.patch_overlapping)
 
-#### Build network
-num_classes = hc_set.get_num_classes()
-img_shape = (config.patch_size, config.patch_size, config.num_target_features)
+    #### Preprocessing
+    hc_set.standardize(num_features=config.num_target_features,
+                       selection_method=LayerSelectionMethod.FACTOR_ANALYSIS)
 
-model = build_network(network_type=network_type, num_classes=num_classes, image_dim=img_shape)
-compile_network(model, network_type, network_name, num_classes, show_summary=True, render_image=True)
-model.save_weights(network_name + "_init.h5")
+    #### Build network
+    metrics = training_metrics.TrainingMetrics()
+    num_classes = hc_set.get_num_classes()
+    img_shape = (patch_size, patch_size, config.num_target_features)
 
-### Split test
-X_test, y_test = hc_set.split_test(patch_size=config.patch_size)
-y_test = reduce_labels_center(y_test)
-(X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False,
-                                         strategy=sampling_strategy)
-
-for i in range(num_tests):
-    print("Test " + str(i+1) + "/" + str(num_tests))
-    print("---------------------------------")
-
-    ### Restore weights
-    model.load_weights(network_name + "_init.h5")
+    network_name = get_name(network_type) + '_window_size_test'
+    model = build_network(network_type=network_type, num_classes=num_classes, image_dim=img_shape)
+    compile_network(model, network_type, network_name, num_classes, show_summary=True, render_image=True)
     starting_index = 0
 
+    ### Split test
+    X_test, y_test = hc_set.split_test(patch_size=patch_size)
+    y_test = reduce_labels_center(y_test)
+    (X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False,
+                                             strategy=sampling_strategy)
+
     history = training_history.TrainingHistory(accuracy_name='sparse_categorical_accuracy')
-    callbacks, time_callback = get_callback_list(model_name=network_name, test_id=i)
+    callbacks, time_callback = get_callback_list(model_name=network_name)
 
     #### Training
     while True:
-        X_train, y_train = hc_set.split_train(patch_size=config.patch_size, max_train_samples=max_samples,
+        X_train, y_train = hc_set.split_train(patch_size=patch_size, max_train_samples=max_samples,
                                               starting_index=starting_index, remove=False)
 
         if len(X_train) > 0:
             y_train = reduce_labels_center(y_train)
             (patch, patch_label), rest_patch, rest_label = balance_classes(X_train, y_train, reduce=True,
                                                                            clustering=False, strategy=sampling_strategy)
-            #(rest_patch, rest_label), _, _ = balance_classes(rest_patch, rest_label, reduce=True, clustering=False)
 
             X_train, y_train = [], []
             X_train.append(patch)
@@ -120,8 +116,10 @@ for i in range(num_tests):
     render_model_history(history, model_name=network_name)
     render_confusion_matrix(y_test, test_prediction)
 
-metrics.print_metrics()
-metrics.save(network_name)
+    del model
+    del hc_set
+    del X_test, y_test
+    gc.collect()
 
-# Delete weight file
-os.remove(network_name + "_init.h5")
+    metrics.print_metrics()
+    metrics.save(network_name)

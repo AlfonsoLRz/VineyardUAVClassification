@@ -90,11 +90,16 @@ def reduce_labels_center(label):
     return new_labels
 
 
-def remove_soil_labels(patch, label, soil_label=0):
+def remove_labels(patches, labels, r_labels=[]):
     """
-    Remove soil labels from the data.
+    Remove specific labels from the data.
     """
-    return patch[label != soil_label], label[label != soil_label]
+    for label in r_labels:
+        indices = np.where(labels != label)
+        patches = patches[indices]
+        labels = labels[indices]
+
+    return patches, labels
 
 
 def shuffle(patch, label):

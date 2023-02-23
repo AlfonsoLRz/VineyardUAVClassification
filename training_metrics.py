@@ -20,6 +20,36 @@ class TrainingMetrics:
         self._test_f1.append(self.__get_f1_score(y_true, y_pred))
         self._test_roc_auc.append(self.__get_roc_auc_score(y_true, y_pred_prob))
 
+    def get_oa(self):
+        return self._test_ao
+
+    def get_aa(self):
+        return self._test_aa
+
+    def get_kappa(self):
+        return self._test_kappa
+
+    def get_f1(self):
+        return self._test_f1
+
+    def get_roc_auc(self):
+        return self._test_roc_auc
+
+    def get_oa_variance(self):
+        return np.std(self._test_ao)
+
+    def get_aa_variance(self):
+        return np.std(self._test_aa)
+
+    def get_kappa_variance(self):
+        return np.std(self._test_kappa)
+
+    def get_f1_variance(self):
+        return np.std(self._test_f1)
+
+    def get_roc_auc_variance(self):
+        return np.std(self._test_roc_auc)
+
     @staticmethod
     def load(network_name):
         return pickle.load(open(paths.result_folder + 'metrics/' + network_name + '.p', 'rb'))

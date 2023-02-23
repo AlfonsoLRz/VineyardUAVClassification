@@ -87,7 +87,8 @@ class HypercubeSet:
 
                 self._hypercube_shapes.append((min_height, hypercube.get_shape()[1], hypercube.get_shape()[2]))
 
-            self._mask = HypercubeSet._to_id_image(self._mask)
+            if len(self._mask.shape) == 3:
+                self._mask = HypercubeSet._to_id_image(self._mask)
 
         del hc_array
 
@@ -113,11 +114,19 @@ class HypercubeSet:
                           (self._hypercube.shape[0] * self._hypercube.shape[1], self._hypercube.shape[2])), \
                np.reshape(self._mask, self._mask.shape[0] * self._mask.shape[1])
 
+    def get_most_frequent_label(self):
+        """
+        Gets the most frequent label in the hypercube set.
+        :return: Most frequent label.
+        """
+        return np.bincount(self._mask.flatten()).argmax()
+
     def get_num_classes(self):
         """
         :return: Number of classes in the hypercube set.
         """
-        return int(np.max(self._mask)) + 1
+        #return int(np.max(self._mask)) + 1
+        return len(np.unique(self._mask))
 
     def get_num_hypercubes(self):
         """
@@ -159,7 +168,7 @@ class HypercubeSet:
                                                replace=False)
         self._test_indices = np.setdiff1d(available_indices, self._train_indices)
 
-    def obtain_ground_labels(self):
+    def obtain_ground_labels(self, ground_label=0):
         """
         Removes the ground labels from the hypercube set.
         """
@@ -171,7 +180,7 @@ class HypercubeSet:
         # Flatten mask
         mask = np.reshape(self._mask, self._mask.shape[0] * self._mask.shape[1])
         # Ground indices
-        ground_indices = np.where(mask == 0)[0]
+        ground_indices = np.where(mask == ground_label)[0]
         del mask
         num_removable_indices = len(ground_indices) - max_vegetation_samples
         np.random.seed(randomness.random_seed)
@@ -212,6 +221,8 @@ class HypercubeSet:
         Reduces the number of layers in the hypercube.
         """
         reduction = None
+
+        print(hypercube.shape)
 
         if selection_method == LayerSelectionMethod.PCA:
             reduction = PCA(n_components=n_layers, random_state=random_seed)
@@ -340,6 +351,9 @@ class HypercubeSet:
         """
         threed_shape = self._hypercube.shape
         self._hypercube, self._mask = self.flatten()
+
+        print(self._hypercube.shape)
+        print(self._mask.shape)
 
         with alive_bar(2, force_tty=True) as bar:
             reduction = self.reduce_layers(n_layers=num_features, selection_method=selection_method,

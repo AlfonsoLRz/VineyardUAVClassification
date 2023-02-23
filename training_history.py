@@ -60,6 +60,13 @@ class TrainingHistory:
         """
         return len(self._history['val_loss'])
 
+    def get_training_time(self):
+        """
+        Get the training time.
+        :return: Training time.
+        """
+        return self._training_time
+
     @staticmethod
     def load(model_name):
         """

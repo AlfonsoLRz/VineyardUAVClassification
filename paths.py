@@ -4,6 +4,19 @@ result_folder = 'results/'
 class_mask_extension = '_class.png'
 hc_extension = '.hdr'
 
+# public datasets
+public_dataset_path = 'media/public/'
+pavia_umat_path = public_dataset_path + 'PaviaU.mat'
+pavia_umat_mask_path = public_dataset_path + 'PaviaU_gt.mat'
+pavia_centre_umat_path = public_dataset_path + 'Pavia.mat'
+pavia_centre_umat_mask_path = public_dataset_path + 'Pavia_gt.mat'
+indian_pines_umat_path = public_dataset_path + 'Indian_pines_corrected.mat'
+indian_pines_umat_mask_path = public_dataset_path + 'Indian_pines_gt.mat'
+salinas_umat_path = public_dataset_path + 'Salinas_corrected.mat'
+salinas_umat_mask_path = public_dataset_path + 'Salinas_gt.mat'
+salinas_a_umat_path = public_dataset_path + 'SalinasA_corrected.mat'
+salinas_a_umat_mask_path = public_dataset_path + 'SalinasA_gt.mat'
+
 # Extensions
 binary_extension = ".bin"
 csv_extension = ".csv"

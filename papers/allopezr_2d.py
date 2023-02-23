@@ -6,7 +6,6 @@ from keras.models import Model
 from keras.layers import Concatenate, BatchNormalization, Input, Dense, Reshape, Activation, Dropout, Conv2D, \
     LeakyReLU, Flatten, MaxPooling2D, GaussianNoise, Lambda
 from keras.optimizers import RMSprop
-from tensorflow.keras import regularizers
 
 
 def get_residual_block(input, start_size, strides):

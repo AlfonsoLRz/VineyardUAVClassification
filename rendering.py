@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
 import matplotlib.ticker as ticker
 import numpy as np
+import pandas as pd
 import paths
 from randomness import *
 import seaborn as sns
@@ -12,9 +13,9 @@ import umap.umap_ as umap
 
 def get_plot_fonts():
     font = 'Adobe Devanagari'
-    title_font = {'fontname': font, 'size': 13}
-    regular_font = {'fontname': font}
-    font = font_manager.FontProperties(family=font, size=11)
+    title_font = {'fontname': font, 'size': 15}
+    regular_font = {'fontname': font, 'size': 14}
+    font = font_manager.FontProperties(family=font, size=14)
 
     return font, title_font, regular_font
 
@@ -23,6 +24,8 @@ def render_confusion_matrix(y_test, y_pred):
     """
     Renders the confusion matrix of the model predictions.
     """
+    font, title_font, regular_font = get_plot_fonts()
+
     flatten_y_test = np.reshape(y_test, (-1,))
     flatten_y_pred = np.reshape(y_pred, (-1,))
 
@@ -34,8 +37,15 @@ def render_confusion_matrix(y_test, y_pred):
     # sns.heatmap(cmn, annot=True, fmt='.2f', xticklabels=target_names, yticklabels=target_names)
 
     sns.heatmap(cmn, annot=True, fmt='.2f', cmap='Blues')
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
+    plt.ylabel('Actual', **regular_font)
+    plt.xlabel('Predicted', **regular_font)
+    ax = plt.gca()
+    for label in ax.get_xticklabels():
+        label.set_fontproperties(font)
+    for label in ax.get_yticklabels():
+        label.set_fontproperties(font)
+
+    plt.tight_layout()
     plt.savefig(paths.result_folder + 'ConfusionMatrix.png')
     plt.show(block=False)
 
@@ -58,7 +68,8 @@ def render_label_diff(label_diff, filename, dpi=500):
     Renders the difference between the ground truth and the predicted labels.
     """
     plt.imshow(label_diff, cmap='hot', interpolation='nearest')
-    plt.colorbar()
+    #plt.colorbar()
+    plt.tight_layout()
     plt.savefig(paths.result_folder + filename, dpi=dpi)
     plt.show()
 
@@ -93,23 +104,137 @@ def render_model_history(history, model_name):
     """
     Renders the history of the model after training.
     """
+    font, title_font, regular_font = get_plot_fonts()
+
     h_epochs = range(1, history.get_history_length() + 1)
     accuracy = history.get_accuracy_key()
     history_vector = history.get_history()
 
     plt.plot(h_epochs, history_vector[accuracy], label="Training Accuracy")
     plt.plot(h_epochs, history_vector['val_' + accuracy], label="Validation Accuracy")
-    plt.title('Training and Validation Accuracy')
-    plt.legend()
+    ax = plt.gca()
+    for label in ax.get_xticklabels():
+        label.set_fontproperties(font)
+
+    for label in ax.get_yticklabels():
+        label.set_fontproperties(font)
+
+    plt.title('a) Training and validation accuracy', fontdict=title_font)
+    plt.legend(prop=font, frameon=False)
+    plt.ylabel('Accuracy', **regular_font)
+    plt.xlabel('Epoch', **regular_font)
+    plt.tight_layout()
     plt.savefig(paths.result_folder + model_name + '_accuracy.png')
     plt.figure()
 
     # Loss
     plt.plot(h_epochs, history_vector['loss'], label="Training loss")
     plt.plot(h_epochs, history_vector['val_loss'], label="Validation loss")
-    plt.title('Training and validation loss')
-    plt.legend()
+    ax = plt.gca()
+    for label in ax.get_xticklabels():
+        label.set_fontproperties(font)
+
+    for label in ax.get_yticklabels():
+        label.set_fontproperties(font)
+
+    plt.title('b) Training and validation loss', fontdict=title_font)
+    plt.legend(prop=font, frameon=False)
+    plt.ylabel('Loss', **regular_font)
+    plt.xlabel('Epoch', **regular_font)
+    plt.tight_layout()
     plt.savefig(paths.result_folder + model_name + '_loss.png')
+    plt.show()
+
+
+def render_network_training(network_labels, training_time, num_params, title=None, bar_width=0.4):
+    font, title_font, regular_font = get_plot_fonts()
+
+    fig = plt.figure(figsize=(7, 4))
+    ax = fig.add_subplot(111)
+    response_time_y = [x / 60.0 for x in training_time]
+    params_y = [x for x in num_params]
+
+    data = np.concatenate((np.array([['network', 'time', 'params']]),
+                           np.array([network_labels, response_time_y, params_y]).T), axis=0)
+    pd_df = pd.DataFrame(data=data[1:, 1:], index=data[1:, 0], columns=data[0, 1:])\
+        .astype(float)
+    pd_df.plot(kind='bar', secondary_y='params', ax=ax, width=bar_width)
+
+    axes = fig.axes
+    for ax in axes:
+        set_axis_font(ax, font)
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+
+    plt.xlabel('Network', fontdict=regular_font)
+    axes[0].set_ylabel('Training time (minutes)', fontdict=regular_font)
+    axes[1].set_ylabel('#Parameters', fontdict=regular_font)
+    # Set rotation of x-axis labels
+    for item in axes[0].get_xticklabels():
+        item.set_rotation(45)
+    if title is not None:
+        plt.title(title, fontdict=title_font)
+    plt.savefig(paths.result_folder + 'network_training.png')
+    plt.show()
+
+
+def render_time_capacity(response_time, capacity, title=None, bar_width=0.4):
+    font, title_font, regular_font = get_plot_fonts()
+
+    fig = plt.figure(figsize=(7, 4))
+    ax = fig.add_subplot(111)
+    x_val = [x[0] for x in response_time]
+    response_time_y = [x[1] / 60.0 for x in response_time]
+    capacity_y = [x[1] for x in capacity]
+
+    data = np.concatenate((np.array([['patchsize', 'time', 'capacity']]),
+                           np.array([x_val, response_time_y, capacity_y]).T), axis=0)
+    pd_df = pd.DataFrame(data=data[1:, 1:], index=data[1:, 0].astype(np.float).astype(np.int), columns=data[0, 1:])\
+        .astype(float)
+    pd_df.plot(kind='bar', secondary_y='capacity', ax=ax, width=bar_width)
+
+    axes = fig.axes
+    for ax in axes:
+        set_axis_font(ax, font)
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+
+    plt.xlabel('Window size', fontdict=regular_font)
+    axes[0].set_ylabel('Training time (minutes)', fontdict=regular_font)
+    axes[1].set_ylabel('#Parameters', fontdict=regular_font)
+    if title is not None:
+        plt.title(title, fontdict=title_font)
+    plt.savefig(paths.result_folder + 'time_capacity.png')
+    plt.show()
+
+
+def render_window_size_metric(patch_size_metric, annotate_indices=[], title=None):
+    """
+    Renders the metric of the patch size.
+    """
+    font, title_font, regular_font = get_plot_fonts()
+
+    fig = plt.figure(figsize=(6, 4))
+    ax = fig.add_subplot(111)
+    x_val = [x[0] for x in patch_size_metric]
+    y_val = [x[1] for x in patch_size_metric]
+    ax.plot(x_val, y_val, 'rs', x_val, y_val, 'r-')
+    ax.set_xlim([np.min(x_val) - 0.6, np.max(x_val) + 0.6])
+    ax.set_ylim([np.min(y_val) - 0.02, np.max(y_val) + 0.02])
+    ax.set_xticks(x_val)
+    set_axis_font(ax, font)
+
+    # Annotate only certain values
+    for idx in annotate_indices:
+        ax.annotate('{0:.4f}'.format(y_val[idx][0]), xy=(x_val[idx], y_val[idx][0]),
+                    xytext=(x_val[idx] + 1, y_val[idx][0] + 0.008), **regular_font)
+
+    plt.xlabel('Window size', fontdict=regular_font)
+    plt.ylabel('Overall Accuracy', fontdict=regular_font)
+    if title is not None:
+        plt.title(title, fontdict=title_font)
+    plt.tight_layout()
+    plt.savefig(paths.result_folder + 'window_size_test.png')
     plt.show()
 
 
@@ -261,12 +386,8 @@ def render_patches_examples(original_patches, standard_patches, labels, reduced_
             null_ax.spines['bottom'].set_visible(False)
             null_ax.spines['left'].set_visible(False)
 
-        for axis in [ax3, ax4]:
-            for tick_label in axis.get_xticklabels():
-                tick_label.set_fontproperties(font)
-
-            for tick_label in axis.get_yticklabels():
-                tick_label.set_fontproperties(font)
+        set_axis_font(ax3, font)
+        set_axis_font(ax4, font)
 
     plt.tight_layout()
     plt.subplots_adjust(top=0.99, bottom=0.01, hspace=.3, wspace=0.3)
@@ -287,3 +408,10 @@ def render_umap_spectrum(patch, label):
     plt.colorbar(boundaries=np.arange(11) - 0.5).set_ticks(np.arange(10))
     plt.tight_layout()
     plt.show()
+
+def set_axis_font(axis, font):
+    for tick_label in axis.get_xticklabels():
+        tick_label.set_fontproperties(font)
+
+    for tick_label in axis.get_yticklabels():
+        tick_label.set_fontproperties(font)

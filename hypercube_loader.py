@@ -1,8 +1,12 @@
 import cv2
 import glob
+
+import rendering
 from hypercube import Hypercube
 import matplotlib.pyplot as plt
+import numpy as np
 import paths
+import scipy.io as sio
 import spectral
 
 
@@ -67,3 +71,92 @@ def load_hypercubes(n_max_cubes=None, plot_hc=False, plot_mask=False, additional
             break
 
     return cubes
+
+
+def load_umat(hc_numpy, class_mask, path, plot_hc=False, plot_mask=False):
+    hc = Hypercube(hc_numpy, class_mask, None, path)
+
+    if plot_hc:
+        plt.imshow(hc_numpy[:, :, hc_numpy.shape[2] // 2])
+        plt.show()
+
+    if plot_mask:
+        plt.imshow(class_mask)
+        plt.show()
+
+    # Change value 255 to 0
+    values = np.unique(class_mask)
+    class_mask[class_mask == 255] = len(values) - 1
+    values = np.unique(class_mask)
+
+    for v in values:
+        # Count pixels of each class
+        print('Class ' + str(v) + ': ' + str(np.count_nonzero(class_mask == v)))
+
+    return hc
+
+
+def load_pavia_umat(plot_hc=False, plot_mask=False):
+    """
+    Loads the Pavia Umat dataset.
+    """
+    # Load pavia umat as numpy array
+    pavia_umat = sio.loadmat(paths.pavia_umat_path)['paviaU']
+    hc_numpy = np.array(pavia_umat, dtype=np.float32)
+    pavia_umat_gt = sio.loadmat(paths.pavia_umat_mask_path)
+    class_mask = np.array(pavia_umat_gt['paviaU_gt']) - 1
+
+    return load_umat(hc_numpy, class_mask, paths.pavia_umat_pat, plot_hc=plot_hc, plot_mask=plot_mask)
+
+
+def load_pavia_centre_umat(plot_hc=False, plot_mask=False):
+    """
+    Loads the Pavia Umat dataset.
+    """
+    # Load pavia umat as numpy array
+    pavia_umat = sio.loadmat(paths.pavia_centre_umat_path)['pavia']
+    hc_numpy = np.array(pavia_umat, dtype=np.float32)
+    pavia_umat_gt = sio.loadmat(paths.pavia_centre_umat_mask_path)
+    class_mask = np.array(pavia_umat_gt['pavia_gt']) - 1
+
+    return load_umat(hc_numpy, class_mask, paths.pavia_centre_umat_path, plot_hc=plot_hc, plot_mask=plot_mask)
+
+
+def load_indian_pines_umat(plot_hc=False, plot_mask=False):
+    """
+    Loads the Indian Pines Umat dataset.
+    """
+    # Load pavia umat as numpy array
+    print(sio.loadmat(paths.indian_pines_umat_path))
+    indian_pines_umat = sio.loadmat(paths.indian_pines_umat_path)['indian_pines_corrected']
+    hc_numpy = np.array(indian_pines_umat, dtype=np.float32)
+    indian_pines_umat_gt = sio.loadmat(paths.indian_pines_umat_mask_path)
+    class_mask = np.array(indian_pines_umat_gt['indian_pines_gt']) - 1
+
+    return load_umat(hc_numpy, class_mask, paths.indian_pines_umat_path, plot_hc=plot_hc, plot_mask=plot_mask)
+
+
+def load_salinas_umat(plot_hc=False, plot_mask=False):
+    """
+    Loads the Salinas Umat dataset.
+    """
+    # Load pavia umat as numpy array
+    salinas_umat = sio.loadmat(paths.salinas_umat_path)['salinas_corrected']
+    hc_numpy = np.array(salinas_umat, dtype=np.float32)
+    salinas_umat_gt = sio.loadmat(paths.salinas_umat_mask_path)
+    class_mask = np.array(salinas_umat_gt['salinas_gt']) - 1
+
+    return load_umat(hc_numpy, class_mask, paths.salinas_umat_path, plot_hc=plot_hc, plot_mask=plot_mask)
+
+
+def load_salinas_a_umat(plot_hc=False, plot_mask=False):
+    """
+    Loads the Salinas Umat dataset.
+    """
+    # Load pavia umat as numpy array
+    salinas_umat = sio.loadmat(paths.salinas_a_umat_path)['salinasA_corrected']
+    hc_numpy = np.array(salinas_umat, dtype=np.float32)
+    salinas_umat_gt = sio.loadmat(paths.salinas_a_umat_mask_path)
+    class_mask = np.array(salinas_umat_gt['salinasA_gt']) - 1
+
+    return load_umat(hc_numpy, class_mask, paths.salinas_a_umat_path, plot_hc=plot_hc, plot_mask=plot_mask)

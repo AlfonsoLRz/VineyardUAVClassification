@@ -106,7 +106,7 @@ def load_pavia_umat(plot_hc=False, plot_mask=False):
     pavia_umat_gt = sio.loadmat(paths.pavia_umat_mask_path)
     class_mask = np.array(pavia_umat_gt['paviaU_gt']) - 1
 
-    return load_umat(hc_numpy, class_mask, paths.pavia_umat_pat, plot_hc=plot_hc, plot_mask=plot_mask)
+    return load_umat(hc_numpy, class_mask, paths.pavia_umat_path, plot_hc=plot_hc, plot_mask=plot_mask)
 
 
 def load_pavia_centre_umat(plot_hc=False, plot_mask=False):

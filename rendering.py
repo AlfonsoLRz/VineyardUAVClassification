@@ -146,7 +146,7 @@ def render_model_history(history, model_name):
     plt.show()
 
 
-def render_network_training(network_labels, training_time, num_params, title=None, bar_width=0.4):
+def render_network_training(network_labels, training_time, num_params, title=None, bar_width=0.6):
     font, title_font, regular_font = get_plot_fonts()
 
     fig = plt.figure(figsize=(7, 4))
@@ -174,6 +174,7 @@ def render_network_training(network_labels, training_time, num_params, title=Non
         item.set_rotation(45)
     if title is not None:
         plt.title(title, fontdict=title_font)
+    plt.tight_layout()
     plt.savefig(paths.result_folder + 'network_training.png')
     plt.show()
 

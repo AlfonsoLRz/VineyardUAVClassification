@@ -31,19 +31,20 @@ max_samples = 100000
 metrics = training_metrics.TrainingMetrics()
 num_tests = 5
 sampling_strategy = 'not minority'
-if paths.target_area == 2:
-    sampling_strategy = 'majority'
 
-network_type = 'aspn'
+network_type = 'allopezr_2d'
 read_json_config(paths.config_file, network_type=network_type)
-network_name = get_name(network_type) + '_pavia'
+network_name = get_name(network_type) + '_indian_pines'
+
+config.batch_size = 256
 
 #### Hypercube reading
-hc_set = HypercubeSet(hc_array=[load_pavia_umat(plot_hc=False, plot_mask=True)])
+hc_set = HypercubeSet(hc_array=[load_indian_pines_umat(plot_hc=False, plot_mask=True)])
 hc_set.print_metadata()
+ground_label = hc_set.get_most_frequent_label()
 
 #### Dataset creation
-hc_set.obtain_ground_labels(ground_label=9)
+hc_set.obtain_ground_labels(ground_label=ground_label)
 hc_set.obtain_train_indices(test_percentage=config.test_split, patch_size=config.patch_size,
                             patch_overlapping=config.patch_overlapping)
 
@@ -61,9 +62,8 @@ model.save_weights(network_name + "_init.h5")
 ### Split test
 X_test, y_test = hc_set.split_test(patch_size=config.patch_size)
 y_test = reduce_labels_center(y_test)
-X_test, y_test = remove_labels(X_test, y_test, [9])
-(X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False,
-                                         strategy=sampling_strategy)
+X_test, y_test = remove_labels(X_test, y_test, [ground_label])
+#(X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False, strategy=sampling_strategy)
 
 for i in range(num_tests):
     print("Test " + str(i+1) + "/" + str(num_tests))
@@ -74,7 +74,7 @@ for i in range(num_tests):
     starting_index = 0
 
     history = training_history.TrainingHistory(accuracy_name='sparse_categorical_accuracy')
-    callbacks, time_callback = get_callback_list(model_name=network_name, test_id=i)
+    callbacks, time_callback = get_callback_list(model_name=network_name, test_id=i, patience=20)
 
     #### Training
     while True:
@@ -83,24 +83,17 @@ for i in range(num_tests):
 
         if len(X_train) > 0:
             y_train = reduce_labels_center(y_train)
-            X_train, y_train = remove_labels(X_train, y_train, [9])
-            (patch, patch_label), rest_patch, rest_label = balance_classes(X_train, y_train, reduce=True,
-                                                                           clustering=False, strategy=sampling_strategy)
+            X_train, y_train = remove_labels(X_train, y_train, [ground_label])
+            #(X_train, y_train), _, _ = balance_classes(X_train, y_train, reduce=True, clustering=False,
+                                                       #strategy=sampling_strategy)
             #(rest_patch, rest_label), _, _ = balance_classes(rest_patch, rest_label, reduce=True, clustering=False)
 
-            X_train, y_train = [], []
-            X_train.append(patch)
-            y_train.append(patch_label)
+            X_train_augment, y_train_augmented = augment_chunks(X_train, y_train)
+            history.append_history(run_model(model, X_train_augment, y_train_augmented,
+                                             validation_split=validation_split, callbacks=callbacks).history,
+                                   training_callback=time_callback, samples=X_train_augment)
 
-            for i in range(len(X_train)):
-                X_train_augment, y_train_augmented = augment_chunks(X_train[i], y_train[i])
-                history.append_history(run_model(model, X_train_augment, y_train_augmented,
-                                                 validation_split=validation_split, callbacks=callbacks).history,
-                                       training_callback=time_callback, samples=X_train_augment)
-
-                del X_train_augment, y_train_augmented
-
-            del patch, patch_label, rest_patch, rest_label
+            del X_train_augment, y_train_augmented
         else:
             break
 

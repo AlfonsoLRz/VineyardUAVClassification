@@ -35,7 +35,7 @@ def force_gpu():
     return strategy_gpu
 
 
-def get_callback_list(model_name, monitor_early_stopping='sparse_categorical_accuracy', patience=20, test_id=0):
+def get_callback_list(model_name, monitor_early_stopping='val_loss', patience=20, test_id=0):
     time_callback = TimeCallback()
 
     return [

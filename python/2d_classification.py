@@ -34,9 +34,9 @@ sampling_strategy = 'not minority'
 if paths.target_area == 2:
     sampling_strategy = 'majority'
 
-network_type = 'allopezr_2d'
+network_type = 'spectral_net'
 read_json_config(paths.config_file, network_type=network_type)
-network_name = get_name(network_type)
+network_name = get_name(network_type) + '_pavia'
 
 #### Hypercube reading
 hc_set = HypercubeSet(hc_array=load_hypercubes(plot_hc=False, plot_mask=True, n_max_cubes=inf))

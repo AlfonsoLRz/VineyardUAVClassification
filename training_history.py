@@ -75,9 +75,9 @@ class TrainingHistory:
         """
         return pickle.load(open(paths.result_folder + 'history/' + model_name + '.p', 'rb'))
 
-    def save(self, model_name):
+    def save(self, model_name, test_id=0):
         """
         Save the history object to file.
         :param model_name: Name of model.
         """
-        pickle.dump(self, open(paths.result_folder + 'history/' + model_name + '.p', 'wb'))
+        pickle.dump(self, open(paths.result_folder + 'history/' + model_name + '_' + str(test_id) + '.p', 'wb'))

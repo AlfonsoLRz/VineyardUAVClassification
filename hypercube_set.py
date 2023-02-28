@@ -98,6 +98,10 @@ class HypercubeSet:
         swath_shape = self._hypercube_shapes[0]
         swath_shape = (swath_shape[0] - patch_size, swath_shape[1] - patch_size)
 
+        print("y_label shape: ", y_label.shape)
+        print("prediction shape: ", prediction.shape)
+        print("swath_shape: ", swath_shape)
+
         shaped_label = np.reshape(y_label, swath_shape)
         shaped_prediction = np.reshape(prediction, swath_shape)
         diff = np.abs(shaped_label - shaped_prediction)
@@ -273,10 +277,11 @@ class HypercubeSet:
         if patch_id < len(self._hypercube_shapes) and offset < num_pixels:
             if limit is not None:
                 num_pixels = min(min(num_pixels, limit), num_pixels - offset)
-            available_indices = np.arange(num_pixels * patch_id + offset, num_pixels * patch_id + offset + num_pixels,
-                                          step=1)
+            available_indices = np.arange(offset, num_pixels + offset, step=1)
 
-            return self.__split_indices(available_indices, patch_size, swath_shape)
+            print('Available indices: {}'.format(available_indices.shape))
+
+            return self.__split_swath_indices(available_indices, patch_size, patch_id)
 
         return None, None
 
@@ -299,6 +304,31 @@ class HypercubeSet:
                 hypercube_index = int(x // hypercube_shape[1])
                 base_hypercube_x = hypercube_index * hypercube_shape[1]
                 x -= base_hypercube_x
+
+                if (x - half_patch_size) >= 0 and (x + half_patch_size + 1) < hypercube_shape[1] and \
+                        (y - half_patch_size) >= 0 and (y + half_patch_size + 1) < hypercube_shape[0]:
+                    x += base_hypercube_x
+                    patch.append(self._hypercube[y - half_patch_size:y + half_patch_size + 1,
+                                 x - half_patch_size:x + half_patch_size + 1, :])
+                    label.append(self._mask[y - half_patch_size:y + half_patch_size + 1,
+                                 x - half_patch_size:x + half_patch_size + 1])
+
+                bar()
+
+        return np.asarray(patch), np.asarray(label)
+
+    def __split_swath_indices(self, indices, patch_size, patch_id):
+        patch = []
+        label = []
+        hypercube_shape = self._hypercube_shapes[0]
+        num_train_samples = indices.shape[0]
+        half_patch_size = patch_size // 2
+
+        with alive_bar(num_train_samples, force_tty=True) as bar:
+            for index in indices:
+                y, x = index // hypercube_shape[1], index % hypercube_shape[1]
+                hypercube_index = patch_id
+                base_hypercube_x = hypercube_index * hypercube_shape[1]
 
                 if (x - half_patch_size) >= 0 and (x + half_patch_size + 1) < hypercube_shape[1] and \
                         (y - half_patch_size) >= 0 and (y + half_patch_size + 1) < hypercube_shape[0]:
@@ -372,6 +402,15 @@ class HypercubeSet:
 
         threed_shape = (threed_shape[0], threed_shape[1], self._hypercube.shape[1])
         self._to_3d(threed_shape)
+
+    def swap_classes(self, class1, class2):
+        """
+        Swaps the classes of the mask.
+        """
+        foo = 200
+        self._mask[self._mask == class1] = foo
+        self._mask[self._mask == class2] = class1
+        self._mask[self._mask == foo] = class2
 
     def _to_3d(self, shape_3d):
         """

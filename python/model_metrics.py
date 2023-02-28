@@ -11,7 +11,7 @@ os.environ["PATH"] += os.pathsep + 'C:/Program Files/Graphviz/bin/'
 os.chdir(os.getcwd().split("python")[0])
 
 inf = 2e32
-network_type = 'nezami'
+network_type = 'allopezr'
 read_json_config(paths.config_file, network_type=network_type)
 
 #### Hypercube reading

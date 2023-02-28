@@ -20,7 +20,7 @@ def get_plot_fonts():
     return font, title_font, regular_font
 
 
-def render_confusion_matrix(y_test, y_pred):
+def render_confusion_matrix(y_test, y_pred, model_name):
     """
     Renders the confusion matrix of the model predictions.
     """
@@ -46,7 +46,7 @@ def render_confusion_matrix(y_test, y_pred):
         label.set_fontproperties(font)
 
     plt.tight_layout()
-    plt.savefig(paths.result_folder + 'ConfusionMatrix.png')
+    plt.savefig(paths.result_folder + 'images/' + model_name + '_confusion_matrix.png')
     plt.show(block=False)
 
 
@@ -124,12 +124,12 @@ def render_model_history(history, model_name):
     plt.ylabel('Accuracy', **regular_font)
     plt.xlabel('Epoch', **regular_font)
     plt.tight_layout()
-    plt.savefig(paths.result_folder + model_name + '_accuracy.png')
+    plt.savefig(paths.result_folder + 'images/' + model_name + '_accuracy.png')
     plt.figure()
 
     # Loss
-    plt.plot(h_epochs, history_vector['loss'], label="Training loss")
-    plt.plot(h_epochs, history_vector['val_loss'], label="Validation loss")
+    plt.plot(h_epochs, history_vector['loss'], label="Training Loss")
+    plt.plot(h_epochs, history_vector['val_loss'], label="Validation Loss")
     ax = plt.gca()
     for label in ax.get_xticklabels():
         label.set_fontproperties(font)
@@ -142,7 +142,7 @@ def render_model_history(history, model_name):
     plt.ylabel('Loss', **regular_font)
     plt.xlabel('Epoch', **regular_font)
     plt.tight_layout()
-    plt.savefig(paths.result_folder + model_name + '_loss.png')
+    plt.savefig(paths.result_folder + 'images/' + model_name + '_loss.png')
     plt.show()
 
 

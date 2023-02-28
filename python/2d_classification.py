@@ -32,26 +32,40 @@ metrics = training_metrics.TrainingMetrics()
 num_tests = 5
 sampling_strategy = 'not minority'
 if paths.target_area == 2:
-    sampling_strategy = 'majority'
+    sampling_strategy = 'all'
 
-network_type = 'spectral_net'
+network_type = 'nezami'
 read_json_config(paths.config_file, network_type=network_type)
-network_name = get_name(network_type) + '_pavia'
+network_name = get_name(network_type)
 
 #### Hypercube reading
 hc_set = HypercubeSet(hc_array=load_hypercubes(plot_hc=False, plot_mask=True, n_max_cubes=inf))
-hc_set.print_metadata()
 
 #### Dataset creation
 hc_set.obtain_ground_labels()
 hc_set.obtain_train_indices(test_percentage=test_split, patch_size=config.patch_size,
                             patch_overlapping=config.patch_overlapping)
 
+# Remove unwanted labels
+if paths.target_area == 2:
+    num_classes = hc_set.get_num_classes()
+    hc_set.swap_classes(2, num_classes - 2)
+    hc_set.swap_classes(7, num_classes - 3)
+    hc_set.swap_classes(5, num_classes - 4)
+else:
+    num_classes = hc_set.get_num_classes()
+    hc_set.swap_classes(0, num_classes - 1)
+hc_set.print_metadata()
+
 #### Preprocessing
 hc_set.standardize(num_features=config.num_target_features, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS)
 
 #### Build network
 num_classes = hc_set.get_num_classes()
+if paths.target_area == 2:
+    num_classes -= 3
+else:
+    num_classes -= 1
 img_shape = (config.patch_size, config.patch_size, config.num_target_features)
 
 model = build_network(network_type=network_type, num_classes=num_classes, image_dim=img_shape)
@@ -61,8 +75,11 @@ model.save_weights(network_name + "_init.h5")
 ### Split test
 X_test, y_test = hc_set.split_test(patch_size=config.patch_size)
 y_test = reduce_labels_center(y_test)
-(X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False,
-                                         strategy=sampling_strategy)
+if paths.target_area == 2:
+    X_test, y_test = remove_labels(X_test, y_test, [num_classes, num_classes + 1, num_classes + 2])
+else:
+    X_test, y_test = remove_labels(X_test, y_test, [num_classes])
+#(X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False, strategy=sampling_strategy)
 
 for i in range(num_tests):
     print("Test " + str(i+1) + "/" + str(num_tests))
@@ -82,9 +99,16 @@ for i in range(num_tests):
 
         if len(X_train) > 0:
             y_train = reduce_labels_center(y_train)
-            (patch, patch_label), rest_patch, rest_label = balance_classes(X_train, y_train, reduce=True,
-                                                                           clustering=False, strategy=sampling_strategy)
+
+            if paths.target_area == 2:
+                X_train, y_train = remove_labels(X_train, y_train, [num_classes, num_classes + 1, num_classes + 2, num_classes + 3])
+            else:
+                X_train, y_train = remove_labels(X_train, y_train, [num_classes])
+
+            (patch, patch_label), _, _ = balance_classes(X_train, y_train, reduce=True,
+                                                         clustering=False, strategy=sampling_strategy)
             #(rest_patch, rest_label), _, _ = balance_classes(rest_patch, rest_label, reduce=True, clustering=False)
+            render_mask_histogram(patch_label)
 
             X_train, y_train = [], []
             X_train.append(patch)
@@ -98,7 +122,7 @@ for i in range(num_tests):
 
                 del X_train_augment, y_train_augmented
 
-            del patch, patch_label, rest_patch, rest_label
+            del patch, patch_label
         else:
             break
 
@@ -114,11 +138,11 @@ for i in range(num_tests):
     test_loss, test_accuracy = model.evaluate(X_test, y_test)
     print("Test Loss: " + str(test_loss) + ", Test Accuracy: " + str(test_accuracy))
 
-    history.save(network_name)
+    history.save(network_name, test_id=i)
 
     # Graphic results
     render_model_history(history, model_name=network_name)
-    render_confusion_matrix(y_test, test_prediction)
+    render_confusion_matrix(y_test, test_prediction, model_name=network_name)
 
 metrics.print_metrics()
 metrics.save(network_name)

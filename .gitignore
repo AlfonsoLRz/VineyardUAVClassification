@@ -33,6 +33,7 @@
 
 # Dataset
 media/*
+results/*
 *.jpg
 *.mp4
 *.xls
@@ -79,7 +80,6 @@ media/*
 .idea/*
 *.pyc
 *.xml
-results/tuning/*
 
 # Executables
 *.exe

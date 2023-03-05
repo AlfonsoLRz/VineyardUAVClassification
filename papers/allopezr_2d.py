@@ -59,7 +59,7 @@ def get_allopezr_2d_model(img_size, num_classes, start_size=32, intermediate_act
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = Dropout(0.4)(x)
-    x = get_naive_inception_module(x, start_size * 6, strides=strides)
+    x = get_inception_module(x, start_size * 6, strides=strides)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = Flatten()(x)

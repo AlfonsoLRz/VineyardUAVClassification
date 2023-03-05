@@ -146,10 +146,10 @@ def render_model_history(history, model_name):
     plt.show()
 
 
-def render_network_training(network_labels, training_time, num_params, title=None, bar_width=0.6):
+def render_network_training(network_labels, training_time, num_params, title=None, bar_width=0.5):
     font, title_font, regular_font = get_plot_fonts()
 
-    fig = plt.figure(figsize=(7, 4))
+    fig = plt.figure(figsize=(6, 4))
     ax = fig.add_subplot(111)
     response_time_y = [x / 60.0 for x in training_time]
     params_y = [x for x in num_params]

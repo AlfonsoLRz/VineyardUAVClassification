@@ -1,4 +1,4 @@
-target_area = 1
+target_area = 2
 folder_path = 'media/Mateus_2022/Area0' + str(target_area) + '/'
 result_folder = 'results/'
 class_mask_extension = '_class.png'

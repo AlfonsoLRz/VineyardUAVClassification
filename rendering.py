@@ -1,12 +1,23 @@
+import copy
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
+import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
 import numpy as np
+import os
 import pandas as pd
 import paths
+import plotly.io as plt_io
+import plotly.graph_objects as go
+import plotly.offline
+from PyQt5.QtCore import QUrl
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWidgets import QApplication
 from randomness import *
 import seaborn as sns
+from sklearn.manifold import TSNE
 from sklearn.metrics import confusion_matrix
+import sys
 import training_history
 import umap.umap_ as umap
 
@@ -67,8 +78,11 @@ def render_label_diff(label_diff, filename, dpi=500):
     """
     Renders the difference between the ground truth and the predicted labels.
     """
+    # Get pixels from hypercube zero whose labels are different from the ground truth
+
     plt.imshow(label_diff, cmap='hot', interpolation='nearest')
-    #plt.colorbar()
+    plt.colorbar()
+    plt.axis('off')
     plt.tight_layout()
     plt.savefig(paths.result_folder + filename, dpi=dpi)
     plt.show()
@@ -149,7 +163,7 @@ def render_model_history(history, model_name):
 def render_network_training(network_labels, training_time, num_params, title=None, bar_width=0.5):
     font, title_font, regular_font = get_plot_fonts()
 
-    fig = plt.figure(figsize=(6, 4))
+    fig = plt.figure(figsize=(7, 4.3))
     ax = fig.add_subplot(111)
     response_time_y = [x / 60.0 for x in training_time]
     params_y = [x for x in num_params]
@@ -174,6 +188,10 @@ def render_network_training(network_labels, training_time, num_params, title=Non
         item.set_rotation(45)
     if title is not None:
         plt.title(title, fontdict=title_font)
+
+    cyan_patch = mpatches.Patch(color='cyan', label='Training time')
+    orange_patch = mpatches.Patch(color='orange', label='Number of parameters')
+    plt.legend(handles=[cyan_patch, orange_patch], prop=font, frameon=False)
     plt.tight_layout()
     plt.savefig(paths.result_folder + 'network_training.png')
     plt.show()
@@ -395,20 +413,89 @@ def render_patches_examples(original_patches, standard_patches, labels, reduced_
     plt.savefig(paths.result_folder + "patch_grid.png", dpi=300, transparent=True)
 
 
-def render_umap_spectrum(patch, label):
+def render_manifold_separability(embedding, label, include_annotations=True):
     """
-    Renders the UMAP of the spectrum of every label in the hypercube.
+    Renders the t-SNE of the spectrum of every label in the hypercube.
     """
-    reducer = umap.UMAP(random_state=random_seed)
-    embedding = reducer.fit_transform(patch)
-
     # Adjust size of plot
-    plt.figure(figsize=(10, 6))
+    font, title_font, regular_font = get_plot_fonts()
+    plt.figure(figsize=(8, 6))
     plt.scatter(embedding[:, 0], embedding[:, 1], c=label, cmap='Spectral', s=5)
+    if include_annotations:
+        annotations = get_annotation_labels(embedding, label, prob=0.009)
+        ax = plt.gca()
+
+        for idx in range(len(annotations)):
+            ax.annotate(annotations[idx], (embedding[idx, 0], embedding[idx, 1]),
+                        xytext=(embedding[idx, 0] + 0.05, embedding[idx, 1] + 0.3),
+                        bbox=dict(boxstyle="round", alpha=0.05), **regular_font)
+
     plt.gca().set_aspect('equal', 'datalim')
-    plt.colorbar(boundaries=np.arange(11) - 0.5).set_ticks(np.arange(10))
+    cb = plt.colorbar(boundaries=np.arange(11) - 0.5)
+    cb.set_ticks(np.arange(10))
+    for t in cb.ax.get_yticklabels():
+        t.set_fontproperties(font)
+    plt.axis('off')
     plt.tight_layout()
+    plt.savefig(paths.result_folder + "separability.png", dpi=300, transparent=True)
     plt.show()
+
+
+def render_3d_manifold_separability(embedding, label):
+    """
+    Renders the 3D unmixed manifold of data.
+    """
+    annotation_labels = copy.copy(label)
+    annotation_labels = [str(x) for x in annotation_labels]
+    font = 'Adobe Devanagari'
+
+    fig = go.Figure(data=[go.Scatter3d(
+        x=embedding[:, 0],
+        y=embedding[:, 1],
+        z=embedding[:, 2],
+        mode='markers',
+        marker=dict(
+            size=5,
+            color=label,  # set color to an array/list of desired values
+            colorscale='Viridis',  # choose a colorscale
+            opacity=1,
+            line_width=1,
+            colorbar=dict(
+                title="Red Variety"
+            ),
+        ),
+    )])
+    # tight layout
+    ann = [dict(x=x, y=y, z=z, text=annotation, showarrow=False) for x, y, z, annotation in
+           zip(embedding[:, 0], embedding[:, 1], embedding[:, 2], annotation_labels)]
+    # fig.update_layout(
+    #     scene=dict(
+    #         annotations=ann
+    #     )
+    # )
+    # fig.update_layout(margin=dict(l=50, r=50, b=50, t=50), width=1080, height=975)
+    fig.layout.template = 'plotly'
+    fig.update_layout(
+        font_family=font,
+        font_size=14,
+        title_font_family=font,
+        width=1200,
+        height=800
+    )
+    fig.update_xaxes(title_font_family=font)
+    fig.update_layout(showlegend=False)
+
+    config = {
+        'toImageButtonOptions': {
+            'format': 'png',  # one of png, svg, jpeg, webp
+            'filename': 'D:/Test',
+            'scale': 6  # Multiply title/legend/axis/canvas sizes by this factor
+        }
+    }
+
+    # fig.show(config=config)
+    show_in_window(fig)
+
 
 def set_axis_font(axis, font):
     for tick_label in axis.get_xticklabels():
@@ -416,3 +503,76 @@ def set_axis_font(axis, font):
 
     for tick_label in axis.get_yticklabels():
         tick_label.set_fontproperties(font)
+
+
+def show_in_window(fig):
+    filename = "Components.html"
+    plotly.offline.plot(fig, filename=filename, auto_open=False)
+
+    app = QApplication(sys.argv)
+    web = QWebEngineView()
+    file_path = os.path.abspath(os.path.join(os.path.dirname("__file__"), filename))
+    web.load(QUrl.fromLocalFile(file_path))
+    web.show()
+    sys.exit(app.exec_())
+
+
+## Manifold anotations
+
+def get_annotation_labels(embedding, labels, prob=0.05):
+    annotation_labels = copy.copy(labels)
+    annotation_labels = [str(x) for x in annotation_labels]
+
+    regular_grid_lod_x, regular_grid_lod_y = 5, 10
+    rect_size_x, rect_size_y = 0.3, 0.2
+
+    x_min, x_max = np.min(embedding[:, 0]) - 0.0001, np.max(embedding[:, 0]) + 0.0001
+    y_min, y_max = np.min(embedding[:, 1]) - 0.0001, np.max(embedding[:, 1]) + 0.0001
+
+    x_size, y_size = (x_max - x_min) / regular_grid_lod_x, (y_max - y_min) / regular_grid_lod_y
+    regular_grid = np.zeros(shape=(int(np.ceil(((x_max - x_min) / x_size))), int(np.ceil((y_max - y_min) / y_size))))
+    included_labels = []
+
+    # Fill borders
+    regular_grid[0, :] = 1
+    regular_grid[-1, :] = 1
+    regular_grid[:, 0] = 1
+    regular_grid[:, -1] = 1
+
+    for idx, label in enumerate(annotation_labels):
+        if np.random.rand() < prob and not label_overlaps(embedding[idx, 0], embedding[idx, 1], rect_size_x,
+                                                          rect_size_y, included_labels):
+            included_labels.append((embedding[idx, 0], embedding[idx, 1]))
+            mark_grid(embedding[idx, 0], embedding[idx, 1], x_min, x_size, y_min, y_size, regular_grid)
+        else:
+            annotation_labels[idx] = ""
+
+    return annotation_labels
+
+
+def map_x_y(x, y, x_min, x_size, y_min, y_size):
+    return int(np.floor((x - x_min) / x_size)), int(np.floor((y - y_min) / y_size))
+
+
+def is_regular_grid_occupied(x, y, x_min, x_size, y_min, y_size, regular_grid):
+    x_d, y_d = map_x_y(x, y, x_min, x_size, y_min, y_size)
+    return regular_grid[x_d, y_d] > 0
+
+
+def mark_grid(x, y, x_min, x_size, y_min, y_size, regular_grid):
+    x_d, y_d = map_x_y(x, y, x_min, x_size, y_min, y_size)
+    regular_grid[x_d, y_d] += 1
+
+
+def label_overlaps(x, y, rect_size_x, rect_size_y, included_labels):
+    xmin2, xmax2 = x - rect_size_x, x + rect_size_x
+    ymin2, ymax2 = y - rect_size_y, y + rect_size_y
+
+    for (x_1, y_1) in included_labels:
+        xmin1, xmax1 = x_1 - rect_size_x, x_1 + rect_size_x
+        ymin1, ymax1 = y_1 - rect_size_y, y_1 + rect_size_y
+
+        if xmax1 >= xmin2 and xmax2 >= xmin1 and ymax1 >= ymin2 and ymax2 >= ymin1:
+            return True
+
+    return False

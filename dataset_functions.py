@@ -4,6 +4,7 @@ from imblearn.over_sampling import *
 from imblearn.under_sampling import *
 from keras.utils import to_categorical
 from randomness import *
+from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
 
 
@@ -57,6 +58,19 @@ def balance_classes(patch, label, smote=True, clustering=True, reduce=False, str
 
     return shuffle(reshaped_chunk, y_balanced), np.delete(patch, sm.sample_indices_, axis=0), \
            np.delete(label, sm.sample_indices_, axis=0)
+
+
+def embed_manifold(patch, tsne=False, num_components=2):
+    """
+    Embed the data into a manifold.
+    """
+    if tsne:
+        reducer = TSNE(random_state=random_seed, n_components=num_components)
+    else:
+        reducer = umap.UMAP(random_state=random_seed, n_components=num_components)
+    embedding = reducer.fit_transform(patch)
+
+    return embedding
 
 
 def get_center(data):

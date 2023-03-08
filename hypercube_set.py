@@ -1,6 +1,8 @@
 from alive_progress import alive_bar
 from enum import Enum
 import hypercube as hc
+import json
+import pickle
 import randomness
 from randomness import *
 from rendering import *
@@ -102,10 +104,15 @@ class HypercubeSet:
         print("prediction shape: ", prediction.shape)
         print("swath_shape: ", swath_shape)
 
+        max_label = np.max(y_label)
         shaped_label = np.reshape(y_label, swath_shape)
         shaped_prediction = np.reshape(prediction, swath_shape)
         diff = np.abs(shaped_label - shaped_prediction)
         diff[diff > 0] = 1
+
+        # Get indices where ylabel is max label
+        indices = np.where(shaped_label == max_label)
+        diff[indices] = 2
 
         return diff
 
@@ -375,33 +382,35 @@ class HypercubeSet:
 
         return np.array(chunk), np.array(chunk_label)
 
-    def standardize(self, num_features=30, standardize=True, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS):
+    def standardize(self, num_features=30, standardize=True, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS,
+                    reduction=None, standard_scaler=None):
         """
         Preprocessing of UAV data into relevant data for DL.
         """
         threed_shape = self._hypercube.shape
         self._hypercube, self._mask = self.flatten()
 
-        print(self._hypercube.shape)
-        print(self._mask.shape)
-
         with alive_bar(2, force_tty=True) as bar:
-            reduction = self.reduce_layers(n_layers=num_features, selection_method=selection_method,
-                                           hypercube=self._hypercube[self._train_indices],
-                                           mask=self._mask[self._train_indices])
+            if reduction is None:
+                reduction = self.reduce_layers(n_layers=num_features, selection_method=selection_method,
+                                               hypercube=self._hypercube[self._train_indices],
+                                               mask=self._mask[self._train_indices])
             self._hypercube = reduction.transform(self._hypercube)
 
             bar()
 
             if standardize:
-                standard_scaler = StandardScaler()
-                standard_scaler.fit(self._hypercube[self._train_indices])
+                if standard_scaler is None:
+                    standard_scaler = StandardScaler()
+                    standard_scaler.fit(self._hypercube[self._train_indices])
                 self._hypercube = standard_scaler.transform(self._hypercube)
 
             bar()
 
         threed_shape = (threed_shape[0], threed_shape[1], self._hypercube.shape[1])
         self._to_3d(threed_shape)
+
+        return reduction, standard_scaler
 
     def swap_classes(self, class1, class2):
         """
@@ -426,6 +435,10 @@ class HypercubeSet:
         id_image = np.zeros(shape=(h, w))
         color_dict = {(0, 0, 0): 0}
 
+        # # Load color_dict with pickle
+        # with open('color_dict_2022.pkl', 'rb') as handle:
+        #     color_dict = pickle.load(handle)
+
         for y in range(0, h):
             for x in range(0, w):
                 color = (int(img[y, x, 0]), int(img[y, x, 1]), int(img[y, x, 2]))
@@ -433,5 +446,17 @@ class HypercubeSet:
                     color_dict[color] = len(color_dict)
 
                 id_image[y, x] = color_dict[color]
+
+        # print(color_dict)
+        #
+        # unique_ids = np.unique(id_image)
+        # for i in range(0, len(unique_ids)):
+        #     # Count number of pixels for each class
+        #     num_pixels = np.count_nonzero(id_image == unique_ids[i])
+        #     print("Class " + str(unique_ids[i]) + " has " + str(num_pixels) + " pixels.")
+
+        # # Save color_dict to file as an object
+        # with open('color_dict_2022.pkl', 'wb') as f:
+        #     pickle.dump(color_dict, f, pickle.HIGHEST_PROTOCOL)
 
         return id_image

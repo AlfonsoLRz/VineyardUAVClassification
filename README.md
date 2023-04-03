@@ -97,4 +97,4 @@ The following images depict the confusion matrices and separability of the propo
 
 This result has been partially supported by the Spanish Ministry of Science, Innovation and Universities via a doctoral grant to the first author (FPU19/00100), as well as a grant for researching at the University of Trás-os Montes e Alto Douro (EST22/00350).
 
-![Universities](readme_assets/universities.png)
+<img src="readme_assets/universities.png" style="width:50%; display: block; margin: 0 auto"/>

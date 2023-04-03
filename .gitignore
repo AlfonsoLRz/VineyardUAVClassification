@@ -92,6 +92,18 @@ results/*
 # Pickle
 *.p
 
+# Others 
+*.pkl
+
 # Keras
 *.h5
 logs/*
+
+# Unpublished files
+papers/allopezr_3d.py
+jupyter/*
+replace_colors.py
+training/*
+!training/2d_classification.py
+!training/2d_classification_umat.py
+

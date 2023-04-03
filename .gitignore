@@ -48,6 +48,8 @@ results/*
 *.JPG
 *.saa
 
+!readme_assets/*
+
 # Prerequisites
 *.d
 
@@ -106,4 +108,3 @@ replace_colors.py
 training/*
 !training/2d_classification.py
 !training/2d_classification_umat.py
-

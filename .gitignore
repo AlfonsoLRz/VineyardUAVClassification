@@ -99,6 +99,7 @@ results/*
 
 # Keras
 *.h5
+!trained_networks/*.h5
 logs/*
 
 # Unpublished files

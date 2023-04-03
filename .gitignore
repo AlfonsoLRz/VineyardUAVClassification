@@ -47,6 +47,7 @@ results/*
 *.TIF
 *.JPG
 *.saa
+!pip3/*
 
 !readme_assets/*
 

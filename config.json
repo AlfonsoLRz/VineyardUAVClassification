@@ -18,7 +18,6 @@
     },
     "fsk_net": {
         "start_size": "16",
-        "num_target_features": 30,
         "patch_size": "19",
         "patch_overlapping": "18",
         "optimizer": "rmsprop",

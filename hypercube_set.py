@@ -22,39 +22,6 @@ class LayerSelectionMethod(Enum):
     LDA = 4
 
 
-class RedVineyardLabel(Enum):
-    """
-    Enum for the different red wine labels.
-    """
-    Alvarelhao = 1
-    Sousao = 8
-    TourigaNacional = 2
-    TourigaFrancesa = 7
-    Alicante = 3
-    TourigaFemea = 4
-    Barroca = 6
-    TintaRoriz = 5
-
-
-class WhiteVineyardLabel(Enum):
-    """
-    Enum for the different white wine labels.
-    """
-    Unknown1 = 1
-    Boal = 2
-    Unknown2 = 3
-    Unknown3 = 4
-    CodegaDoLadinho = 5
-    Unknown4 = 6
-    MoscatelGalego = 7
-    NascatelGalegoRoixo = 8
-    AritoDoDouro = 9
-    Cercial = 10
-    MalvasiaFina = 11
-    Unknown5 = 12
-    Unknown6 = 13
-
-
 class HypercubeSet:
     def __init__(self, hc_array):
         """
@@ -215,17 +182,6 @@ class HypercubeSet:
         """
         print(title + 'Min: {}, Max: {}, Size: {}'.format(np.min(self._hypercube), np.max(self._hypercube),
                                                           self._hypercube.shape))
-
-    def print_num_samples_per_label(self, red=True):
-        """
-        Prints the number of samples per label.
-        """
-        for label in range(1, self.get_num_classes()):
-            if red:
-                print('Label {}: {}'.format(RedVineyardLabel(label).name, np.sum(self._mask == label)))
-            else:
-                print('Label {}: {}'.format(WhiteVineyardLabel(label).name, np.sum(self._mask == label)))
-
     @staticmethod
     def reduce_layers(hypercube, mask, n_layers=30, selection_method=LayerSelectionMethod.PCA):
         """

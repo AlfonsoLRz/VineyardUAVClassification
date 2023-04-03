@@ -1,10 +1,24 @@
 # Deep Learning classification of hyperspectral UAV swaths
 
-![Vineyard Vila Real](readme_assets/vineyard_background.jpg)
+![Python](https://img.shields.io/badge/Python-3.9-green.svg) 
+![Keras](https://img.shields.io/badge/Keras-2.10.0-red.svg) 
+![Tensorflow](https://img.shields.io/badge/TensorFlow-2.11.0-orange.svg) 
+![Pandas](https://img.shields.io/badge/Pandas-1.5.1-yellow.svg)
+![Numpy](https://img.shields.io/badge/Numpy-1.23.4-blue.svg)
+![imblearn](https://img.shields.io/badge/imbalanced_learn-0.9.1-purple.svg)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-3.6.2-lime.svg)
+![spectral](https://img.shields.io/badge/spectral-0.23.1-cyan.svg)
+![Seaborn](https://img.shields.io/badge/Seaborn-0.12.1-green.svg)
 
 This repository contains additional material from the paper titled 'Classification of vineyard varieties with UAV hyperspectral imaging'. It contains the source code, the trained networks in `.h5` file format and some brief concepts for anyone wondering how to make this project work.
 
-## Trained networks
+![Vineyard Vila Real](readme_assets/vineyard_background.jpg)
+
+# Requirements
+
+The large list of requirements is placed under `pip3`, along with the used version. It is recommended to start from a clean project and use the `requirements.txt` as input for `pip3`. Also, note that we have used CUDA and CuNN to fasten the training of the proposed network. Nevertheless, it should also work without these components in your computer. However, we are trying to link with CuNN at the start of the training, so a warning is the least you can expect without it.
+
+# Trained networks
 
 These are under the `trained_networks` folder, one for each grapevine variety (either red or white). Note that these use some custom layers, and therefore, these must be specified in the loading.
 
@@ -29,19 +43,19 @@ if render_image:
                                 show_layer_names=False)
 ```
 
-## Datasets
+# Datasets
 
 If these are required, please contact allopezr@ujaen.es and they will be provided if the petition is properly justified. 
 
-## Training 
+# Training 
 
-Please, use the `.py` files under `training` folder as the entry point of the training phase. These files load the hypercube, split into patches and execute a number of tests that are averaged and saved in the file system. Nevertheless, averaged results, together with the variability, will be displayed at the end of the training.
+Please, use the `.py` files under `training` folder as the entry point of the training phase. These files load the hypercubes, split them into patches and execute several tests that are averaged and saved in the file system. Nevertheless, averaged results, together with the variability, will be displayed at the end of the training.
 
-## Configuration
+# Configuration
 
 This repository contains a non-updated `config.py` with the experimental settings for every compared network. However, we rather recommend `config.json`, since it has a higher priority. Note that we had some reloading troubles with python files in Jupyter notebooks, and therefore, a JSON file was used over the first one. The `config.py` is loaded, and then, `config.json` overrides the content of the variables as defined in the python file.
 
-### Which parameters are supported?
+## Which parameters are supported?
 
 Parameters not related to a specific network:
 * batch_size: 512
@@ -70,7 +84,7 @@ Others that can be specified for an individual network:
 * patch_overlapping: 22
 * momentum: 0.9 (SGD optimizer)
 
-Note that patch size should be an odd number, whereas overlapping must be lower than patch size. It is similar to the concept of striding in CNNs. It is easier to integrate more parameters if required, simply modify the file `cnn_builder.py`.
+Note that the patch size should be an odd number, whereas overlapping must be lower than the patch size. It is similar to the concept of striding in CNNs. It is easier to integrate more parameters if required, simply modify the file `cnn_builder.py`.
 
 # Results
 
@@ -79,8 +93,7 @@ The following images depict the confusion matrices and separability of the propo
 ![Confusion Matrices](readme_assets/confusion_matrices.png)
 ![Separability](readme_assets/separability.png)
 
-
-## Acknowledgments
+# Acknowledgments
 
 This result has been partially supported by the Spanish Ministry of Science, Innovation and Universities via a doctoral grant to the first author (FPU19/00100), as well as a grant for researching at the University of Trás-os Montes e Alto Douro (EST22/00350).
 

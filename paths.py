@@ -1,5 +1,5 @@
-target_area = 'red'
-folder_path = 'media/Mateus_2022/' + target_area + '/'
+target_area = 'white'
+folder_path = 'media/Mateus_2021/' + target_area + '/'
 result_folder = 'results/' + target_area + '/'
 class_mask_extension = '_class.png'
 hc_extension = '.hdr'

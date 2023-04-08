@@ -1,4 +1,5 @@
 import copy
+from hypercube_set import *
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
 import matplotlib.patches as mpatches
@@ -66,11 +67,41 @@ def render_hc_spectrum_label(hc_numpy, mask):
     Renders the spectrum of every label in the hypercube.
     """
     n_classes = np.unique(mask)
+    font, title_font, regular_font = get_plot_fonts()
+    rows, cols = 2, len(n_classes) // 2
 
-    for class_id in n_classes:
+    dict = red_vineyard_name
+    width = 16
+    if paths.target_area == 'white':
+        cols +=1
+        width += 4
+        dict = white_vineyard_name
+
+    plt.subplots(figsize=(width, 6))
+    for i, class_id in enumerate(n_classes):
+        row = i // cols
+        col = i % cols
+
+        print(class_id)
+        plt.subplot(rows, cols, 1 + i)
         sample_subset = hc_numpy[mask == class_id, :]
-        plt.plot(np.average(sample_subset, axis=0), label=class_id)
-    plt.legend()
+
+        mean = np.average(sample_subset, axis=0)
+        variance = np.var(sample_subset, axis=0)
+        plt.fill_between(range(len(mean)), mean - variance, mean + variance, alpha=0.2)
+        plt.plot(mean, label=class_id)
+
+        # Change font of axes
+        plt.title(dict[class_id], **title_font)
+        if row > 0:
+            plt.xlabel('Spectral band', **regular_font)
+        if col == 0:
+            plt.ylabel('Reflectance', **regular_font)
+        plt.xticks(fontproperties=font)
+        plt.yticks(fontproperties=font)
+
+    plt.tight_layout()
+    plt.savefig(paths.result_folder + 'images/hc_spectrum_label.png', dpi=500)
     plt.show()
 
 
@@ -81,7 +112,7 @@ def render_label_diff(label_diff, filename, dpi=500):
     # Get pixels from hypercube zero whose labels are different from the ground truth
 
     plt.imshow(label_diff, cmap='hot', interpolation='nearest')
-    plt.colorbar()
+    # plt.colorbar()
     plt.axis('off')
     plt.tight_layout()
     plt.savefig(paths.result_folder + filename, dpi=dpi)
@@ -223,7 +254,8 @@ def render_time_capacity(response_time, capacity, title=None, bar_width=0.4):
     axes[1].set_ylabel('#Parameters', fontdict=regular_font)
     if title is not None:
         plt.title(title, fontdict=title_font)
-    plt.savefig(paths.result_folder + 'time_capacity.png')
+    plt.tight_layout()
+    plt.savefig(paths.result_folder + 'time_capacity.png', dpi=300)
     plt.show()
 
 
@@ -246,14 +278,14 @@ def render_window_size_metric(patch_size_metric, annotate_indices=[], title=None
     # Annotate only certain values
     for idx in annotate_indices:
         ax.annotate('{0:.4f}'.format(y_val[idx][0]), xy=(x_val[idx], y_val[idx][0]),
-                    xytext=(x_val[idx] + 1, y_val[idx][0] + 0.008), **regular_font)
+                    xytext=(x_val[idx] - 1, y_val[idx][0] + 0.007), **regular_font)
 
-    plt.xlabel('Window size', fontdict=regular_font)
+    plt.xlabel('Patch size', fontdict=regular_font)
     plt.ylabel('Overall Accuracy', fontdict=regular_font)
     if title is not None:
         plt.title(title, fontdict=title_font)
     plt.tight_layout()
-    plt.savefig(paths.result_folder + 'window_size_test.png')
+    plt.savefig(paths.result_folder + 'window_size_test.png', dpi=300)
     plt.show()
 
 

@@ -28,15 +28,13 @@ if gpus:
         print(e)
 
 inf = 2e32
-max_samples = 50000
+max_samples = 100000
 sampling_strategy = 'not minority'
-if paths.target_area == 2:
-    sampling_strategy = 'majority'
 
 network_type = 'allopezr_2d'
 read_json_config(paths.config_file, network_type=network_type)
 
-for patch_size in np.arange(31, 33, 2):
+for patch_size in np.arange(23, 29, 2):
     config.patch_size = patch_size
     config.patch_overlapping = patch_size - 1
 
@@ -49,14 +47,19 @@ for patch_size in np.arange(31, 33, 2):
     hc_set.obtain_train_indices(test_percentage=test_split, patch_size=config.patch_size,
                                 patch_overlapping=config.patch_overlapping)
 
+    # Remove unwanted labels
+    num_classes = hc_set.get_num_classes()
+    hc_set.swap_classes(0, num_classes - 1)
+    hc_set.print_metadata()
+
     #### Preprocessing
-    hc_set.standardize(num_features=config.num_target_features,
-                       selection_method=LayerSelectionMethod.FACTOR_ANALYSIS)
+    hc_set.standardize(num_features=config.num_target_features, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS)
 
     #### Build network
-    metrics = training_metrics.TrainingMetrics()
     num_classes = hc_set.get_num_classes()
-    img_shape = (patch_size, patch_size, config.num_target_features)
+    num_classes -= 1
+    img_shape = (config.patch_size, config.patch_size, config.num_target_features)
+    metrics = training_metrics.TrainingMetrics()
 
     network_name = get_name(network_type) + '_window_size_test'
     model = build_network(network_type=network_type, num_classes=num_classes, image_dim=img_shape)
@@ -66,8 +69,8 @@ for patch_size in np.arange(31, 33, 2):
     ### Split test
     X_test, y_test = hc_set.split_test(patch_size=patch_size)
     y_test = reduce_labels_center(y_test)
-    (X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False,
-                                             strategy=sampling_strategy)
+    X_test, y_test = remove_labels(X_test, y_test, [num_classes])
+    # (X_test, y_test), _, _ = balance_classes(X_test, y_test, reduce=True, clustering=False, strategy=sampling_strategy)
 
     history = training_history.TrainingHistory(accuracy_name='sparse_categorical_accuracy')
     callbacks, time_callback = get_callback_list(model_name=network_name)
@@ -79,7 +82,8 @@ for patch_size in np.arange(31, 33, 2):
 
         if len(X_train) > 0:
             y_train = reduce_labels_center(y_train)
-            (patch, patch_label), rest_patch, rest_label = balance_classes(X_train, y_train, reduce=True,
+            X_train, y_train = remove_labels(X_train, y_train, [num_classes])
+            (patch, patch_label), _, _ = balance_classes(X_train, y_train, reduce=True,
                                                                            clustering=False, strategy=sampling_strategy)
 
             X_train, y_train = [], []
@@ -94,7 +98,7 @@ for patch_size in np.arange(31, 33, 2):
 
                 del X_train_augment, y_train_augmented
 
-            del patch, patch_label, rest_patch, rest_label
+            del patch, patch_label
         else:
             break
 
@@ -114,7 +118,7 @@ for patch_size in np.arange(31, 33, 2):
 
     # Graphic results
     render_model_history(history, model_name=network_name)
-    render_confusion_matrix(y_test, test_prediction)
+    render_confusion_matrix(y_test, test_prediction, model_name=network_name)
 
     del model
     del hc_set

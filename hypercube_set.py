@@ -21,38 +21,28 @@ class LayerSelectionMethod(Enum):
     NMF = 3
     LDA = 4
 
+red_vineyard_name = {
+    2: 'Alvarelhao',
+    4: 'Sousao',
+    7: 'Touriga National',
+    0: 'Touriga Francesa',
+    6: 'Alicante',
+    5: 'Touriga Femea',
+    3: 'Barroca',
+    1: 'Tinta Roriz'
+}
 
-class RedVineyardLabel(Enum):
-    """
-    Enum for the different red wine labels.
-    """
-    Alvarelhao = 1
-    Sousao = 8
-    TourigaNacional = 2
-    TourigaFrancesa = 7
-    Alicante = 3
-    TourigaFemea = 4
-    Barroca = 6
-    TintaRoriz = 5
-
-
-class WhiteVineyardLabel(Enum):
-    """
-    Enum for the different white wine labels.
-    """
-    Unknown1 = 1
-    Boal = 2
-    Unknown2 = 3
-    Unknown3 = 4
-    CodegaDoLadinho = 5
-    Unknown4 = 6
-    MoscatelGalego = 7
-    NascatelGalegoRoixo = 8
-    AritoDoDouro = 9
-    Cercial = 10
-    MalvasiaFina = 11
-    Unknown5 = 12
-    Unknown6 = 13
+white_vineyard_name = {
+    3: 'Boal',
+    2: 'Codega Do Ladinho',
+    1: 'Moscatel Galego',
+    0: 'Moscatel Galego Roixo',
+    8: 'Arito Do Douro',
+    7: 'Cercial',
+    6: 'Malvasia Fina',
+    5: 'Donzelinho Branco',
+    4: 'Samarrinho'
+}
 
 
 class HypercubeSet:
@@ -114,7 +104,11 @@ class HypercubeSet:
         indices = np.where(shaped_label == max_label)
         diff[indices] = 2
 
-        return diff
+        # Sum 1
+        shaped_prediction = shaped_prediction + 1
+        shaped_prediction[indices] = 0
+
+        return diff, shaped_prediction, shaped_label
 
     def flatten(self):
         """
@@ -435,7 +429,7 @@ class HypercubeSet:
         id_image = np.zeros(shape=(h, w))
         color_dict = {(0, 0, 0): 0}
 
-        # # Load color_dict with pickle
+        # Load color_dict with pickle
         # with open('color_dict_2022.pkl', 'rb') as handle:
         #     color_dict = pickle.load(handle)
 
@@ -447,15 +441,13 @@ class HypercubeSet:
 
                 id_image[y, x] = color_dict[color]
 
-        # print(color_dict)
-        #
         # unique_ids = np.unique(id_image)
         # for i in range(0, len(unique_ids)):
         #     # Count number of pixels for each class
         #     num_pixels = np.count_nonzero(id_image == unique_ids[i])
         #     print("Class " + str(unique_ids[i]) + " has " + str(num_pixels) + " pixels.")
 
-        # # Save color_dict to file as an object
+        # Save color_dict to file as an object
         # with open('color_dict_2022.pkl', 'wb') as f:
         #     pickle.dump(color_dict, f, pickle.HIGHEST_PROTOCOL)
 

@@ -35,3 +35,14 @@ if len(network_weights_files) > 0:
 
     model.summary()
 
+# Read the metrics
+metrics_file = os.path.join(paths.result_folder + 'metrics/', network_name + ".p")
+metrics_files = glob.glob(metrics_file)
+if len(metrics_files) > 0:
+    metrics_file = metrics_files[-1]
+    print("Loading metrics file " + metrics_file)
+    metrics = pickle.load(open(metrics_file, "rb"))
+
+    # Plot the metrics
+    metrics.print_metrics()
+

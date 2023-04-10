@@ -34,12 +34,12 @@ sampling_strategy = 'not minority'
 
 network_type = 'allopezr_2d'
 read_json_config(paths.config_file, network_type=network_type)
-network_name = get_name(network_type) + '_indian_pines'
+network_name = get_name(network_type) + '_pavia_centre'
 
-config.batch_size = 256
+config.batch_size = 512
 
 #### Hypercube reading
-hc_set = HypercubeSet(hc_array=[load_indian_pines_umat(plot_hc=False, plot_mask=True)])
+hc_set = HypercubeSet(hc_array=[load_pavia_centre_umat(plot_hc=False, plot_mask=True)])
 hc_set.print_metadata()
 ground_label = hc_set.get_most_frequent_label()
 
@@ -113,7 +113,7 @@ for i in range(num_tests):
 
     # Graphic results
     render_model_history(history, model_name=network_name)
-    render_confusion_matrix(y_test, test_prediction)
+    render_confusion_matrix(y_test, test_prediction, model_name=network_name)
 
 metrics.print_metrics()
 metrics.save(network_name)

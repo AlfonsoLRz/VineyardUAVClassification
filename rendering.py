@@ -82,7 +82,6 @@ def render_hc_spectrum_label(hc_numpy, mask):
         row = i // cols
         col = i % cols
 
-        print(class_id)
         plt.subplot(rows, cols, 1 + i)
         sample_subset = hc_numpy[mask == class_id, :]
 

@@ -16,7 +16,7 @@ class Hypercube:
     BLUE_WL = 480
     NIR_WL = 800
 
-    def __init__(self, hc_numpy, hc_mask, bands, path=None):
+    def __init__(self, hc_numpy, hc_mask, bands, path=None, baseline_class_idx=0):
         """
         Initializes a hypercube.
         :param hc_numpy: Hypercube.
@@ -27,6 +27,9 @@ class Hypercube:
         self._mask = hc_mask
         self._bands = bands
         self._path = path
+
+        self._to_id_image(baseline_class_idx)
+        self._labels = np.unique(self._mask)
 
     def calculate_index(self, thresholding=True, threshold=.5, index=VegetationIndex.NDVI):
         """
@@ -88,6 +91,12 @@ class Hypercube:
         """
         return self._hypercube
 
+    def get_labels(self):
+        """
+        :return: Labels.
+        """
+        return self._labels
+
     @staticmethod
     def get_rgb_indices(bands):
         """
@@ -123,6 +132,28 @@ class Hypercube:
         """
         cv2.imwrite(path, mask)
 
+    def subsample(self, subsampling_percentage):
+        """
+        Subsamples the hypercube.
+        :param subsampling_percentage: Subsampling percentage.
+        """
+        starting_shape = self._hypercube.shape
+        random_indices = np.random.choice(self._hypercube.shape[0] * self._hypercube.shape[1],
+                                            math.floor(self._hypercube.shape[0] * self._hypercube.shape[1] *
+                                                         subsampling_percentage), replace=False)
+        self._hypercube = np.reshape(self._hypercube, (self._hypercube.shape[0] * self._hypercube.shape[1],
+                                                       self._hypercube.shape[2]))
+        self._mask = np.reshape(self._mask, (self._mask.shape[0] * self._mask.shape[1],))
+
+        subsamples = self._hypercube[random_indices, :].copy()
+        labels = self._mask[random_indices].copy()
+
+        self._hypercube = np.reshape(self._hypercube, starting_shape)
+        self._mask = np.reshape(self._mask, (starting_shape[0], starting_shape[1]))
+
+        return subsamples, labels
+
+
     @staticmethod
     def __search_nearest_layer(bands, wl):
         """
@@ -151,3 +182,35 @@ class Hypercube:
                 return index
             else:
                 return index + 1
+    def _to_id_image(self, baseline_class_idx=0, null_idx=0):
+        h = self._mask.shape[0]
+        w = self._mask.shape[1]
+        id_image = np.zeros(shape=(h, w))
+        color_dict = {(0, 0, 0): null_idx}
+
+        # Load color_dict with pickle
+        # with open('color_dict_2022.pkl', 'rb') as handle:
+        #     color_dict = pickle.load(handle)
+
+        for y in range(0, h):
+            for x in range(0, w):
+                color = (int(self._mask[y, x, 0]), int(self._mask[y, x, 1]), int(self._mask[y, x, 2]))
+                if color not in color_dict:
+                    color_dict[color] = len(color_dict)
+
+                if color_dict[color] == null_idx:
+                    id_image[y, x] = null_idx
+                else:
+                    id_image[y, x] = color_dict[color] + baseline_class_idx
+
+        # unique_ids = np.unique(id_image)
+        # for i in range(0, len(unique_ids)):
+        #     # Count number of pixels for each class
+        #     num_pixels = np.count_nonzero(id_image == unique_ids[i])
+        #     print("Class " + str(unique_ids[i]) + " has " + str(num_pixels) + " pixels.")
+
+        # Save color_dict to file as an object
+        # with open('color_dict_2022.pkl', 'wb') as f:
+        #     pickle.dump(color_dict, f, pickle.HIGHEST_PROTOCOL)
+
+        self._mask = id_image

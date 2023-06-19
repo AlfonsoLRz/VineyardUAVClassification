@@ -21,29 +21,6 @@ class LayerSelectionMethod(Enum):
     NMF = 3
     LDA = 4
 
-red_vineyard_name = {
-    2: 'Alvarelhao',
-    4: 'Sousao',
-    7: 'Touriga National',
-    0: 'Touriga Francesa',
-    6: 'Alicante',
-    5: 'Touriga Femea',
-    3: 'Barroca',
-    1: 'Tinta Roriz'
-}
-
-white_vineyard_name = {
-    3: 'Boal',
-    2: 'Codega Do Ladinho',
-    1: 'Moscatel Galego',
-    0: 'Moscatel Galego Roixo',
-    8: 'Arito Do Douro',
-    7: 'Cercial',
-    6: 'Malvasia Fina',
-    5: 'Donzelinho Branco',
-    4: 'Samarrinho'
-}
-
 
 class HypercubeSet:
     def __init__(self, hc_array):
@@ -51,38 +28,36 @@ class HypercubeSet:
         Initializes a hypercube set.
         :param hc_array: Array of loaded hypercubes.
         """
-        self._hypercube = None
-        self._mask = None
-        self._hypercube_shapes = []
-        self._bands = None
+        self._hypercubes = hc_array
         self._train_indices = None
         self._test_indices = None
         self._remove_ground_indices = None
+        self._num_samples = 0
+        self._num_classes = 0
 
-        if hc_array is not None and len(hc_array) > 0:
-            self._bands = hc_array[0].get_bands()
+        for hc in self._hypercubes:
+            self._num_samples += hc.get_shape()[0] * hc.get_shape()[1]
+            self._num_classes = max(self._num_classes, np.max(hc.get_labels()) + 1)
 
-            # Determine min. height
-            min_height = hc_array[0].get_hypercube().shape[0]
-            for hypercube_idx in range(1, len(hc_array)):
-                if hc_array[hypercube_idx].get_hypercube().shape[0] < min_height:
-                    min_height = hc_array[hypercube_idx].get_hypercube().shape[0]
 
-            for hypercube in hc_array:
-                if self._hypercube is not None:
-                    self._hypercube = np.concatenate((self._hypercube, hypercube.get_hypercube()[:min_height, :, :]),
-                                                     axis=1)
-                    self._mask = np.concatenate((self._mask, hypercube.get_class_mask()[:min_height, :]), axis=1)
-                else:
-                    self._hypercube = hypercube.get_hypercube()[:min_height, :, :]
-                    self._mask = hypercube.get_class_mask()[:min_height, :]
+    def subsample(self, subsampling_percentage=0.01):
+        global_samples = None
+        global_labels = None
 
-                self._hypercube_shapes.append((min_height, hypercube.get_shape()[1], hypercube.get_shape()[2]))
+        for hc in self._hypercubes:
+            samples, labels = hc.subsample(subsampling_percentage)
+            print("samples shape: ", samples.shape)
 
-            if len(self._mask.shape) == 3:
-                self._mask = HypercubeSet._to_id_image(self._mask)
+            if global_samples is None:
+                global_samples = samples
+                global_labels = labels
+            else:
+                global_samples = np.concatenate((global_samples, samples), axis=0)
+                global_labels = np.concatenate((global_labels, labels), axis=0)
 
-        del hc_array
+        return global_samples, global_labels
+
+    ########################################
 
     def compose_swath_evaluation(self, y_label, prediction, patch_size):
         if patch_size % 2 == 0:
@@ -182,6 +157,8 @@ class HypercubeSet:
         for label in range(1, self.get_num_classes()):
             max_vegetation_samples = max(max_vegetation_samples, np.sum(self._mask == label))
 
+        print(self.get_num_classes())
+
         # Flatten mask
         mask = np.reshape(self._mask, self._mask.shape[0] * self._mask.shape[1])
         # Ground indices
@@ -226,8 +203,6 @@ class HypercubeSet:
         Reduces the number of layers in the hypercube.
         """
         reduction = None
-
-        print(hypercube.shape)
 
         if selection_method == LayerSelectionMethod.PCA:
             reduction = PCA(n_components=n_layers, random_state=random_seed)

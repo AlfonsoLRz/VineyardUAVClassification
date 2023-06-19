@@ -43,17 +43,15 @@ def __load_mask(path, plot_mask=False):
     return mask
 
 
-def load_hypercubes(n_max_cubes=None, plot_hc=False, plot_mask=False, additional_root='', selected_cubes=[]):
+def load_hypercubes(n_max_cubes=None, plot_hc=False, plot_mask=False, folder='', baseline_class_idx = 0):
     """
     Loads all hypercubes from the given folder.
     """
-    cube_paths = glob.glob(additional_root + paths.folder_path + 'raw*rf' + paths.hc_extension)
+    cube_paths = glob.glob(folder + 'raw*rf' + paths.hc_extension)
     cubes = []
+    max_class_idx = 0
 
     for idx, path in enumerate(cube_paths):
-        if len(selected_cubes) > 0 and idx not in selected_cubes:
-            continue
-
         file_name = path[0: len(path) - len(paths.hc_extension)]
         if len(file_name) == 0:
             continue
@@ -63,14 +61,17 @@ def load_hypercubes(n_max_cubes=None, plot_hc=False, plot_mask=False, additional
         class_mask = __load_mask(file_name + paths.class_mask_extension, plot_mask=plot_mask)
 
         if hc_numpy is not None and class_mask is not None:
-            hc = Hypercube(hc_numpy, class_mask, hc_bands, path)
-            hc.filter_wl(450, 950)
+            hc = Hypercube(hc_numpy, class_mask, hc_bands, path, baseline_class_idx=baseline_class_idx)
+            hc.filter_wl(hc_bands[25], hc_bands[-25])
+            max_class_idx = int(max(max_class_idx, np.max(hc.get_labels())))
+            print(hc.get_labels())
+
             cubes.append(hc)
 
-        if idx >= n_max_cubes - 1:
+        if idx >= (n_max_cubes - 1):
             break
 
-    return cubes
+    return cubes, max_class_idx
 
 
 def load_umat(hc_numpy, class_mask, path, plot_hc=False, plot_mask=False):

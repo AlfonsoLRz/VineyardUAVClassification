@@ -27,6 +27,9 @@ class Hypercube:
         self._mask = hc_mask
         self._bands = bands
         self._path = path
+        self._removed_indices = None
+        self._train_indices = None
+        self._test_indices = None
 
         self._to_id_image(baseline_class_idx)
         self._labels = np.unique(self._mask)
@@ -53,9 +56,14 @@ class Hypercube:
 
         return index_factor
 
-    def flatten(self):
+    def flatten_hc(self):
+        shape = self._hypercube.shape
         return np.reshape(self._hypercube,
-                          (self._hypercube.shape[0] * self._hypercube.shape[1], self._hypercube.shape[2]))
+                         (self._hypercube.shape[0] * self._hypercube.shape[1], self._hypercube.shape[2])), shape
+
+    def flatten_mask(self):
+        shape = self._mask.shape
+        return np.reshape(self._mask, (self._mask.shape[0] * self._mask.shape[1])), shape
 
     def filter_wl(self, min_nm=0, max_nm=2000):
         """
@@ -72,6 +80,15 @@ class Hypercube:
 
         self._hypercube = self._hypercube[:, :, min_idx + 1:max_idx]
         self._bands = self._bands[min_idx + 1:max_idx]
+
+    def fit_model(self, standardizer):
+        """
+        Fits a standardizer to the hypercube.
+        :param standardizer: Standardizer.
+        """
+        self._hypercube, shape = self.flatten_hc()
+        standardizer.fit(self._hypercube[self._train_indices, :])
+        self._hypercube = np.reshape(self._hypercube, shape)
 
     def get_bands(self):
         """
@@ -96,6 +113,31 @@ class Hypercube:
         :return: Labels.
         """
         return self._labels
+
+    def get_patches(self, patch_size, patch_overlap, start_percentage, end_percentage, train=True):
+        indices = self._train_indices if train else self._test_indices
+        start_idx = math.floor(len(indices) * start_percentage)
+        end_idx = math.floor(len(indices) * end_percentage)
+        indices = indices[start_idx:end_idx]
+        patches = []
+        labels = []
+
+        pre_patch_size = patch_size // 2
+        post_patch_size = patch_size // 2 + 1 if patch_size % 2 != 0 else patch_size // 2
+        patch_overlap = patch_size - patch_overlap
+
+        for i in indices:
+            x = i % self._mask.shape[1]
+            y = i // self._mask.shape[1]
+            if x + post_patch_size >= self._mask.shape[1] or y + post_patch_size >= self._mask.shape[0]\
+                    or x - pre_patch_size < 0 or y - pre_patch_size < 0 or x % patch_overlap != 0 or y % patch_overlap != 0:
+                continue
+
+            patch = self._hypercube[y - pre_patch_size:y + post_patch_size, x - pre_patch_size:x + post_patch_size, :]
+            patches.append(patch)
+            labels.append(self._mask[y, x])
+
+        return np.asarray(patches), np.asarray(labels) - 1
 
     @staticmethod
     def get_rgb_indices(bands):
@@ -123,6 +165,18 @@ class Hypercube:
         print(title + 'Min: {}, Max: {}, Size: {}'.format(np.min(self._hypercube), np.max(self._hypercube),
                                                           self._hypercube.shape))
 
+    def remove_ground_indices(self, ground_index):
+        """
+        Removes ground indices from hypercube.
+        :param ground_index: Ground index.
+        """
+        # Flatten mask
+        self._mask = np.reshape(self._mask, (self._mask.shape[0] * self._mask.shape[1]))
+        self._removed_indices = np.where(self._mask == ground_index)[0]
+
+        # Reshape again
+        self._mask = np.reshape(self._mask, (self._hypercube.shape[0], self._hypercube.shape[1]))
+
     @staticmethod
     def save_mask(mask, path):
         """
@@ -131,6 +185,36 @@ class Hypercube:
         :param path: Path to save the mask.
         """
         cv2.imwrite(path, mask)
+
+    def split(self, train_percentage):
+        """
+        Splits the hypercube into training and test sets.
+        :param train_percentage: Training percentage.
+        :return: Training and test sets.
+        """
+        self._mask, mask_shape = self.flatten_mask()
+        trainable_indices = np.arange(self._mask.shape[0])
+        self._mask = np.reshape(self._mask, mask_shape)
+        trainable_indices = np.delete(trainable_indices, self._removed_indices)
+        train_size = math.floor(train_percentage * len(trainable_indices))
+        self._train_indices = np.random.choice(trainable_indices, train_size, replace=False)
+        self._test_indices = np.setdiff1d(trainable_indices, self._train_indices)
+
+        del self._removed_indices
+        del trainable_indices
+        self._removed_indices = None
+
+    def transform(self, model, num_features=-1):
+        """
+        Standardizes the hypercube.
+        :param model: Standardizer, Feature reduction/transformation.
+        """
+        if num_features == -1:
+            num_features = self._hypercube.shape[-1]
+
+        self._hypercube, shape = self.flatten_hc()
+        self._hypercube = model.transform(self._hypercube)
+        self._hypercube = np.reshape(self._hypercube, (shape[0], shape[1], num_features))
 
     def subsample(self, subsampling_percentage):
         """

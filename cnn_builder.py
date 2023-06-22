@@ -198,8 +198,8 @@ def run_model(model, X_train, y_train, callbacks, validation_split=0.1):
 
     print('Training for {} epochs with batch size of {}...'.format(cfg.epochs, cfg.batch_size))
 
-    return model.fit(X_train, y_train, epochs=cfg.epochs, batch_size=cfg.batch_size,
-                     validation_split=validation_split, callbacks=callbacks)
+    return model.fit(X_train, y_train, validation_split=validation_split, epochs=cfg.epochs, batch_size=cfg.batch_size,
+                     callbacks=callbacks)
 
 
 def hypertune(X_train, y_train, network_type, model_name, callbacks, validation_split=0.1):

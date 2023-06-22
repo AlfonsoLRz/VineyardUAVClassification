@@ -68,8 +68,8 @@
         "patch_size": "24",
         "patch_overlapping": "23"
     },
-    "batch_size": "1024",
-    "epochs": "100",
+    "batch_size": "512",
+    "epochs": "40",
     "last_activation": "softmax",
     "kernel_size": "3",
     "loss": "sparse_categorical_crossentropy",

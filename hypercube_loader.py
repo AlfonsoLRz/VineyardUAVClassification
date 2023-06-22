@@ -64,9 +64,10 @@ def load_hypercubes(n_max_cubes=None, plot_hc=False, plot_mask=False, folder='',
             hc = Hypercube(hc_numpy, class_mask, hc_bands, path, baseline_class_idx=baseline_class_idx)
             hc.filter_wl(hc_bands[25], hc_bands[-25])
             max_class_idx = int(max(max_class_idx, np.max(hc.get_labels())))
-            print(hc.get_labels())
 
             cubes.append(hc)
+
+            print(hc.get_labels())
 
         if idx >= (n_max_cubes - 1):
             break

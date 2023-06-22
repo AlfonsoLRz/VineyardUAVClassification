@@ -1,6 +1,12 @@
 from imblearn.under_sampling import *
+import numpy as np
+import random
 
 random_seed = 42
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
 
 def stratified_sampling(samples, labels):
     """

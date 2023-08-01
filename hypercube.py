@@ -16,7 +16,8 @@ class Hypercube:
     BLUE_WL = 480
     NIR_WL = 800
 
-    def __init__(self, hc_numpy, hc_mask, bands, path=None, baseline_class_idx=0):
+    def __init__(self, hc_numpy, hc_mask, bands, path=None, baseline_class_idx=0, color_dict=None,
+                 null_class_idx=0, null_idx=0):
         """
         Initializes a hypercube.
         :param hc_numpy: Hypercube.
@@ -30,8 +31,11 @@ class Hypercube:
         self._removed_indices = None
         self._train_indices = None
         self._test_indices = None
+        self._color_dict = color_dict
 
-        self._to_id_image(baseline_class_idx)
+        print("Hypercube shape: {}".format(self._hypercube.shape))
+
+        self._to_id_image(baseline_class_idx, null_idx=null_idx, null_class=null_class_idx)
         self._labels = np.unique(self._mask)
 
     def calculate_index(self, thresholding=True, threshold=.5, index=VegetationIndex.NDVI):
@@ -102,6 +106,12 @@ class Hypercube:
         """
         return self._mask
 
+    def get_color_dict(self):
+        """
+        :return: Color dictionary.
+        """
+        return self._color_dict
+
     def get_hypercube(self):
         """
         :return: Hypercube.
@@ -113,6 +123,13 @@ class Hypercube:
         :return: Labels.
         """
         return self._labels
+
+    def get_num_samples(self, label):
+        """
+        Retrieves the number of samples for a specific label.
+        :param label: Label.
+        """
+        return np.count_nonzero(self._mask == label)
 
     def get_patches(self, patch_size, patch_overlap, start_percentage, end_percentage, train=True):
         indices = self._train_indices if train else self._test_indices
@@ -199,6 +216,10 @@ class Hypercube:
         train_size = math.floor(train_percentage * len(trainable_indices))
         self._train_indices = np.random.choice(trainable_indices, train_size, replace=False)
         self._test_indices = np.setdiff1d(trainable_indices, self._train_indices)
+        # Shuffle
+        self._test_indices = np.random.permutation(self._test_indices)
+
+        print('Train size: {}, Test size: {}'.format(len(self._train_indices), len(self._test_indices)))
 
         del self._removed_indices
         del trainable_indices
@@ -266,11 +287,15 @@ class Hypercube:
                 return index
             else:
                 return index + 1
-    def _to_id_image(self, baseline_class_idx=0, null_idx=0):
+    def _to_id_image(self, baseline_class_idx=0, null_idx=0, null_class=0):
         h = self._mask.shape[0]
         w = self._mask.shape[1]
         id_image = np.zeros(shape=(h, w))
-        color_dict = {(0, 0, 0): null_idx}
+        if self._color_dict is None:
+            if len(self._mask.shape) == 3:
+                self._color_dict = {(null_class, null_class, null_class): null_idx}
+            else:
+                self._color_dict = {null_class: null_idx}
 
         # Load color_dict with pickle
         # with open('color_dict_2022.pkl', 'rb') as handle:
@@ -278,15 +303,20 @@ class Hypercube:
 
         for y in range(0, h):
             for x in range(0, w):
-                color = (int(self._mask[y, x, 0]), int(self._mask[y, x, 1]), int(self._mask[y, x, 2]))
-                if color not in color_dict:
-                    color_dict[color] = len(color_dict)
+                if len(self._mask.shape) == 3:
+                    color = (int(self._mask[y, x, 0]), int(self._mask[y, x, 1]), int(self._mask[y, x, 2]))
+                else:
+                    color = (int(self._mask[y, x]))
 
-                if color_dict[color] == null_idx:
+                if color not in self._color_dict:
+                    self._color_dict[color] = len(self._color_dict)
+
+                if self._color_dict[color] == null_idx:
                     id_image[y, x] = null_idx
                 else:
-                    id_image[y, x] = color_dict[color] + baseline_class_idx
+                    id_image[y, x] = self._color_dict[color] + baseline_class_idx
 
+        # print(self._color_dict)
         # unique_ids = np.unique(id_image)
         # for i in range(0, len(unique_ids)):
         #     # Count number of pixels for each class
@@ -296,5 +326,5 @@ class Hypercube:
         # Save color_dict to file as an object
         # with open('color_dict_2022.pkl', 'wb') as f:
         #     pickle.dump(color_dict, f, pickle.HIGHEST_PROTOCOL)
-
+        print(self._color_dict)
         self._mask = id_image

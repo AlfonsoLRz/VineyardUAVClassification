@@ -9,12 +9,15 @@ epochs = 5
 last_activation = 'softmax'
 kernel_size = 3
 loss = 'sparse_categorical_crossentropy'
+num_training_splits = 5
+num_test_splits = 3
+num_transformation_iterations = 1
 patch_size = 23
 patch_overlapping = 22
 strides = 2
 test_split = 0.2
 validation_split = 0.1
-num_target_features = 30
+num_target_features = 40
 
 
 # Callbacks

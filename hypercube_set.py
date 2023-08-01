@@ -35,6 +35,7 @@ class HypercubeSet:
         self._num_samples = 0
         self._num_classes = 0
         self._swath_weight = []
+        self._color_set = None
 
         for hc in self._hypercubes:
             self._num_samples += hc.get_shape()[0] * hc.get_shape()[1]
@@ -55,7 +56,7 @@ class HypercubeSet:
         for hc in self._hypercubes:
             max_label = max(max_label, np.max(hc.get_labels()))
 
-        return max_label + 1
+        return int(max_label + 1)
 
     def get_num_hypercubes(self):
         """
@@ -70,6 +71,20 @@ class HypercubeSet:
         """
         for hc in self._hypercubes:
             hc.remove_ground_indices(ground_class_idx)
+
+    def print_num_samples(self):
+        """
+        Prints the number of samples per class.
+        """
+        counts = np.zeros((self.get_num_classes(),), np.int32)
+
+        for hc in self._hypercubes:
+            for label in hc.get_labels():
+                counts[int(label)] += hc.get_num_samples(label)
+
+        print("Number of samples per class:")
+        for i in range(0, len(counts)):
+            print("Class {}: {}".format(i, counts[i]))
 
     @staticmethod
     def select_reduction_model(n_layers=30, selection_method=LayerSelectionMethod.PCA):
@@ -100,11 +115,7 @@ class HypercubeSet:
         global_labels = None
 
         for hc in self._hypercubes:
-            print("Splitting hypercube: ", hc)
             patches, labels = hc.get_patches(patch_size, patch_overlap, start_percentage, end_percentage, train=train)
-
-            print("patches shape: ", patches.shape)
-            print("labels shape: ", labels.shape)
 
             if global_samples is None:
                 global_samples = patches
@@ -132,21 +143,18 @@ class HypercubeSet:
 
         return global_samples, global_labels
 
-    def standardize(self, num_features=30, standardize=True, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS,
-                    reduction=None, standard_scaler=None):
+    def standardize(self, num_features=40, standardize=True, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS,
+                    transformation=None, standard_scaler=None):
         """
         Preprocessing of UAV data into relevant data for DL.
         """
-        standard_scaler = None
-        transformation = None
-
         with alive_bar(len(self._hypercubes) * 4, force_tty=True) as bar:
             # Standardize
             for hc in self._hypercubes:
                 if standardize:
                     if standard_scaler is None:
                         standard_scaler = StandardScaler()
-                    hc.fit_model(standard_scaler)
+                        hc.fit_model(standard_scaler)
 
                 bar()
 
@@ -159,7 +167,7 @@ class HypercubeSet:
                 if transformation is None:
                     transformation = self.select_reduction_model(n_layers=num_features,
                                                                  selection_method=selection_method)
-                hc.fit_model(transformation)
+                    hc.fit_model(transformation)
 
                 bar()
 

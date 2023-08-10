@@ -193,7 +193,7 @@ def load_model(network_type, model_name, num_classes, image_dim, show_summary=Tr
     return model
 
 
-def run_model(model, X_train, y_train, X_validation, y_validation, callbacks, num_epochs):
+def run_model(model, X_train, y_train, X_validation, y_validation, callbacks, num_epochs, verbose=1):
     """
     Fits the model with X_train and y_train.
     """
@@ -201,7 +201,7 @@ def run_model(model, X_train, y_train, X_validation, y_validation, callbacks, nu
     print('Training for {} epochs with batch size of {}...'.format(num_epochs, cfg.batch_size))
 
     return model.fit(X_train, y_train, validation_data=(X_validation, y_validation), epochs=num_epochs,
-                     batch_size=cfg.batch_size, callbacks=callbacks)
+                     batch_size=cfg.batch_size, callbacks=callbacks, verbose=verbose)
 
 
 def hypertune(X_train, y_train, network_type, model_name, callbacks, validation_split=0.1):

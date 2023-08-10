@@ -314,7 +314,7 @@ def render_window_size_metric(patch_size_metric, annotate_indices=[], title=None
     y_val = [x[1] for x in patch_size_metric]
     ax.plot(x_val, y_val, 'rs', x_val, y_val, 'r-')
     ax.set_xlim([np.min(x_val) - 0.6, np.max(x_val) + 0.6])
-    ax.set_ylim([np.min(y_val) - 0.02, np.max(y_val) + 0.02])
+    ax.set_ylim([np.min(y_val) - 0.02, np.max(y_val) + 0.025])
     ax.set_xticks(x_val)
     set_axis_font(ax, font)
 
@@ -497,6 +497,7 @@ def render_manifold_separability(embedding, labels, include_annotations=True):
 
     # Adjust size of plot
     font, title_font, regular_font = get_plot_fonts()
+    regular_font['size'] = 21
     plt.figure(figsize=(8, 6))
     plt.scatter(embedding[:, 0], embedding[:, 1], c=labels, cmap='Spectral', s=5)
     if include_annotations:
@@ -518,7 +519,7 @@ def render_manifold_separability(embedding, labels, include_annotations=True):
                         bbox=dict(boxstyle="round", alpha=0.2), **regular_font)
 
     plt.gca().set_aspect('equal', 'datalim')
-    cb = plt.colorbar(boundaries=np.arange(num_different_labels + 1) - 0.5)
+    cb = plt.colorbar(boundaries=np.arange(num_different_labels + 1) - 0.5, fraction=0.035, pad=0)
     cb.set_ticks(np.arange(num_different_labels))
     for t in cb.ax.get_yticklabels():
         t.set_fontproperties(font)

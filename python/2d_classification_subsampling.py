@@ -40,8 +40,7 @@ font_mapping = {'family': 'Palatino Linotype', 'weight': 'normal', 'size': 11}
 plt.rc('font', **font_mapping)
 
 inf = 2e32
-metrics = training_metrics.TrainingMetrics()
-num_tests = 3
+num_tests = 1
 
 network_type = 'allopezr_2d'
 read_json_config(paths.config_file, network_type=network_type)
@@ -74,6 +73,10 @@ transforms = Compose([
         ])
 
 for max_percentage in [0.1, 0.25, 0.4, 0.65, 0.8, 1.0]:
+    print("Max percentage: " + str(max_percentage))
+    print("---------------------------------")
+
+    metrics = training_metrics.TrainingMetrics()
     network_name = get_name(network_type) + "_max_percentage_" + str(max_percentage * 100)
     model = build_network(network_type=network_type, num_classes=num_classes, image_dim=img_shape)
     compile_network(model, network_type, network_name, num_classes, show_summary=True, render_image=True)
@@ -86,16 +89,19 @@ for max_percentage in [0.1, 0.25, 0.4, 0.65, 0.8, 1.0]:
         ### Restore weights
         model.load_weights(network_name + "_init.h5")
         end_percentage = 0.0
+        batch = 0
 
         history = training_history.TrainingHistory(accuracy_name='sparse_categorical_accuracy')
         callbacks, time_callback = get_callback_list(model_name=network_name, test_id=i)
 
         ### Training
         while end_percentage < max_percentage:
+            end_percentage = np.min([1.0, percentage_step * (batch + 1), max_percentage])
             X_train, y_train = hc_set.split(patch_size=config.patch_size, patch_overlap=config.patch_overlapping,
                                             train=True, start_percentage=percentage_step * batch,
-                                            end_percentage=np.min([1.0, percentage_step * (batch + 1), max_percentage]))
-            end_percentage = np.max([percentage_step * (batch + 1), max_percentage])
+                                            end_percentage=end_percentage)
+
+            print("Training with " + str(X_train.shape[0]) + " samples", end_percentage)
 
             X_train, y_train = randomness.stratified_sampling(X_train, y_train, use_float=True, num_reduced_classes=3)
             render_mask_histogram(y_train)
@@ -119,13 +125,15 @@ for max_percentage in [0.1, 0.25, 0.4, 0.65, 0.8, 1.0]:
 
                 history.append_history(
                     run_model(model, X_train_it, y_train_it, X_validation_it, y_validation_it, callbacks=callbacks,
-                              num_epochs=num_iterations).history, time_callback)
+                              num_epochs=num_iterations, verbose=0).history, time_callback)
 
                 del X_train_it, X_validation_it, y_train_it, y_validation_it
                 gc.collect()
 
             del X_train, y_train
             gc.collect()
+
+            batch += 1
 
         #### Split test into batches
         y_test_global = []

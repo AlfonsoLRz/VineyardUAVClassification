@@ -78,13 +78,13 @@ transforms = Compose([
     Rotate(limit=(270, 270), p=0.1)
 ])
 
-network_file = paths.result_folder + 'network/' + network_name + '_hong_hu.h5'
+network_file = paths.result_folder + 'network/' + network_name + '_long_kou_0.h5'
 model = keras.models.load_model(network_file,
                                 custom_objects={'SpatialAttention': papers.aspn.SpatialAttention,
                                                 'SecondOrderPooling': papers.aspn.SecondOrderPooling})
 x = Dense(num_classes, activation=config.last_activation)(model.layers[-2].output)
 model = Model(inputs=model.input, outputs=x)
-network_name += '_transfer_learning_hong_hu'
+network_name += '_transfer_learning_long_kou'
 compile_network(model, network_type, network_name, num_classes, show_summary=True, render_image=True)
 model.save_weights(network_name + "_init.h5")
 

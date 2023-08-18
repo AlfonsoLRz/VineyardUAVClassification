@@ -102,6 +102,7 @@ results/*
 *.h5
 !trained_networks/*.h5
 logs/*
+.logs/*
 
 # Unpublished files
 papers/allopezr_3d.py
@@ -110,3 +111,8 @@ replace_colors.py
 training/*
 !training/2d_classification.py
 !training/2d_classification_umat.py
+spectral_similarity/*
+dsi_metric.py
+
+# Assets
+Components.html

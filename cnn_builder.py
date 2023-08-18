@@ -14,6 +14,7 @@ from papers.jigsaw_hsi import *
 from papers.spectral_net import *
 from papers.lt_cnn import *
 from papers.nezami import *
+import tensorboard_logger
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.client import device_lib
@@ -37,9 +38,10 @@ def force_gpu():
 
 def get_callback_list(model_name, monitor_early_stopping='val_loss', patience=20, test_id=0):
     time_callback = TimeCallback()
+    log_dir = '.logs/'
 
     return [
-        tf.keras.callbacks.TensorBoard(log_dir='./logs'),
+        tf.keras.callbacks.TensorBoard(log_dir='./logs', update_freq=10, histogram_freq=0),
         keras.callbacks.EarlyStopping(
             monitor=monitor_early_stopping,
             patience=patience,
@@ -191,15 +193,15 @@ def load_model(network_type, model_name, num_classes, image_dim, show_summary=Tr
     return model
 
 
-def run_model(model, X_train, y_train, callbacks, validation_split=0.1):
+def run_model(model, X_train, y_train, X_validation, y_validation, callbacks, num_epochs, verbose=1):
     """
     Fits the model with X_train and y_train.
     """
 
-    print('Training for {} epochs with batch size of {}...'.format(cfg.epochs, cfg.batch_size))
+    print('Training for {} epochs with batch size of {}...'.format(num_epochs, cfg.batch_size))
 
-    return model.fit(X_train, y_train, epochs=cfg.epochs, batch_size=cfg.batch_size,
-                     validation_split=validation_split, callbacks=callbacks)
+    return model.fit(X_train, y_train, validation_data=(X_validation, y_validation), epochs=num_epochs,
+                     batch_size=cfg.batch_size, callbacks=callbacks, verbose=verbose)
 
 
 def hypertune(X_train, y_train, network_type, model_name, callbacks, validation_split=0.1):
@@ -264,6 +266,12 @@ def read_json_config(path, network_type):
             cfg.test_split = float(data_params['test_split'])
         if 'validation_split' in data_params:
             cfg.validation_split = float(data_params['validation_split'])
+        if 'num_transformation_iterations' in data_params:
+            cfg.num_transformation_iterations = int(data_params['num_transformation_iterations'])
+        if 'num_training_splits' in data_params:
+            cfg.num_training_splits = int(data_params['num_training_splits'])
+        if 'num_test_splits' in data_params:
+            cfg.num_test_splits = int(data_params['num_test_splits'])
 
         if network_type in data_params:
             network_config = data_params[network_type]

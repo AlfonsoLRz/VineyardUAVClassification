@@ -28,38 +28,156 @@ class HypercubeSet:
         Initializes a hypercube set.
         :param hc_array: Array of loaded hypercubes.
         """
-        self._hypercube = None
-        self._mask = None
-        self._hypercube_shapes = []
-        self._bands = None
+        self._hypercubes = hc_array
         self._train_indices = None
         self._test_indices = None
         self._remove_ground_indices = None
+        self._num_samples = 0
+        self._num_classes = 0
+        self._swath_weight = []
+        self._color_set = None
 
-        if hc_array is not None and len(hc_array) > 0:
-            self._bands = hc_array[0].get_bands()
+        for hc in self._hypercubes:
+            self._num_samples += hc.get_shape()[0] * hc.get_shape()[1]
+            self._num_classes = max(self._num_classes, np.max(hc.get_labels()) + 1)
 
-            # Determine min. height
-            min_height = hc_array[0].get_hypercube().shape[0]
-            for hypercube_idx in range(1, len(hc_array)):
-                if hc_array[hypercube_idx].get_hypercube().shape[0] < min_height:
-                    min_height = hc_array[hypercube_idx].get_hypercube().shape[0]
+        self.compute_swath_weights()
 
-            for hypercube in hc_array:
-                if self._hypercube is not None:
-                    self._hypercube = np.concatenate((self._hypercube, hypercube.get_hypercube()[:min_height, :, :]),
-                                                     axis=1)
-                    self._mask = np.concatenate((self._mask, hypercube.get_class_mask()[:min_height, :]), axis=1)
-                else:
-                    self._hypercube = hypercube.get_hypercube()[:min_height, :, :]
-                    self._mask = hypercube.get_class_mask()[:min_height, :]
+    def compute_swath_weights(self):
+        for hc in self._hypercubes:
+            self._swath_weight.append(hc.get_shape()[0] * hc.get_shape()[1] / self._num_samples)
 
-                self._hypercube_shapes.append((min_height, hypercube.get_shape()[1], hypercube.get_shape()[2]))
+    def get_num_classes(self):
+        """
+        :return: Number of classes in the hypercube set.
+        """
+        max_label = 0
 
-            if len(self._mask.shape) == 3:
-                self._mask = HypercubeSet._to_id_image(self._mask)
+        for hc in self._hypercubes:
+            max_label = max(max_label, np.max(hc.get_labels()))
 
-        del hc_array
+        return int(max_label + 1)
+
+    def get_num_hypercubes(self):
+        """
+        :return: Number of hypercubes in the set.
+        """
+        return len(self._hypercubes)
+
+    def identify_ground_samples(self, ground_class_idx=0):
+        """
+        Identifies the ground samples.
+        :param ground_class_idx: Index of the ground class.
+        """
+        for hc in self._hypercubes:
+            hc.remove_ground_indices(ground_class_idx)
+
+    def print_num_samples(self):
+        """
+        Prints the number of samples per class.
+        """
+        counts = np.zeros((self.get_num_classes(),), np.int32)
+
+        for hc in self._hypercubes:
+            for label in hc.get_labels():
+                counts[int(label)] += hc.get_num_samples(label)
+
+        print("Number of samples per class:")
+        for i in range(0, len(counts)):
+            print("Class {}: {}".format(i, counts[i]))
+
+    @staticmethod
+    def select_reduction_model(n_layers=30, selection_method=LayerSelectionMethod.PCA):
+        """
+        Builds the selection model.
+        """
+        reduction = None
+
+        if selection_method == LayerSelectionMethod.PCA:
+            reduction = PCA(n_components=n_layers, random_state=random_seed)
+        elif selection_method == LayerSelectionMethod.FACTOR_ANALYSIS:
+            reduction = FactorAnalysis(n_components=n_layers, random_state=random_seed)
+        elif selection_method == LayerSelectionMethod.SVD:
+            reduction = TruncatedSVD(n_components=n_layers, random_state=random_seed)
+        elif selection_method == LayerSelectionMethod.NMF:
+            reduction = NMF(n_components=n_layers, random_state=random_seed)
+        elif selection_method == LayerSelectionMethod.LDA:
+            reduction = LDA(n_components=n_layers)
+
+        return reduction
+
+    def split_hypercubes(self, test_percentage=0.2):
+        for hc in self._hypercubes:
+            hc.split(1.0 - test_percentage)
+
+    def split(self, patch_size, patch_overlap, start_percentage=0.0, end_percentage=1.0, train=True):
+        global_samples = None
+        global_labels = None
+
+        for hc in self._hypercubes:
+            patches, labels = hc.get_patches(patch_size, patch_overlap, start_percentage, end_percentage, train=train)
+
+            if global_samples is None:
+                global_samples = patches
+                global_labels = labels
+            else:
+                global_samples = np.concatenate((global_samples, patches), axis=0)
+                global_labels = np.concatenate((global_labels, labels), axis=0)
+
+        return global_samples, global_labels
+
+    def subsample(self, subsampling_percentage=0.01):
+        global_samples = None
+        global_labels = None
+
+        for hc in self._hypercubes:
+            samples, labels = hc.subsample(subsampling_percentage)
+            print("samples shape: ", samples.shape)
+
+            if global_samples is None:
+                global_samples = samples
+                global_labels = labels
+            else:
+                global_samples = np.concatenate((global_samples, samples), axis=0)
+                global_labels = np.concatenate((global_labels, labels), axis=0)
+
+        return global_samples, global_labels
+
+    def standardize(self, num_features=40, standardize=True, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS,
+                    transformation=None, standard_scaler=None):
+        """
+        Preprocessing of UAV data into relevant data for DL.
+        """
+        with alive_bar(len(self._hypercubes) * 4, force_tty=True) as bar:
+            # Standardize
+            for hc in self._hypercubes:
+                if standardize:
+                    if standard_scaler is None:
+                        standard_scaler = StandardScaler()
+                        hc.fit_model(standard_scaler)
+
+                bar()
+
+            for hc in self._hypercubes:
+                hc.transform(standard_scaler, num_features=-1)
+                bar()
+
+            # Feature transformation
+            for hc in self._hypercubes:
+                if transformation is None:
+                    transformation = self.select_reduction_model(n_layers=num_features,
+                                                                 selection_method=selection_method)
+                    hc.fit_model(transformation)
+
+                bar()
+
+            for hc in self._hypercubes:
+                hc.transform(transformation, num_features=num_features)
+                bar()
+
+        return transformation, standard_scaler
+
+    ########################################
 
     def compose_swath_evaluation(self, y_label, prediction, patch_size):
         if patch_size % 2 == 0:
@@ -81,7 +199,11 @@ class HypercubeSet:
         indices = np.where(shaped_label == max_label)
         diff[indices] = 2
 
-        return diff
+        # Sum 1
+        shaped_prediction = shaped_prediction + 1
+        shaped_prediction[indices] = 0
+
+        return diff, shaped_prediction, shaped_label
 
     def flatten(self):
         """
@@ -98,25 +220,6 @@ class HypercubeSet:
         :return: Most frequent label.
         """
         return np.bincount(self._mask.flatten()).argmax()
-
-    def get_num_classes(self):
-        """
-        :return: Number of classes in the hypercube set.
-        """
-        #return int(np.max(self._mask)) + 1
-        return len(np.unique(self._mask))
-
-    def get_num_hypercubes(self):
-        """
-        :return: Number of hypercubes in the set.
-        """
-        return len(self._hypercube_shapes)
-
-    def get_shape(self):
-        """
-        :return: Shape of the hypercube set.
-        """
-        return self._hypercube.shape
 
     def get_vegetation_variance(self):
         """
@@ -182,32 +285,6 @@ class HypercubeSet:
         """
         print(title + 'Min: {}, Max: {}, Size: {}'.format(np.min(self._hypercube), np.max(self._hypercube),
                                                           self._hypercube.shape))
-    @staticmethod
-    def reduce_layers(hypercube, mask, n_layers=30, selection_method=LayerSelectionMethod.PCA):
-        """
-        Reduces the number of layers in the hypercube.
-        """
-        reduction = None
-
-        print(hypercube.shape)
-
-        if selection_method == LayerSelectionMethod.PCA:
-            reduction = PCA(n_components=n_layers, random_state=random_seed)
-        elif selection_method == LayerSelectionMethod.FACTOR_ANALYSIS:
-            reduction = FactorAnalysis(n_components=n_layers, random_state=random_seed)
-        elif selection_method == LayerSelectionMethod.SVD:
-            reduction = TruncatedSVD(n_components=n_layers, random_state=random_seed)
-        elif selection_method == LayerSelectionMethod.NMF:
-            reduction = NMF(n_components=n_layers, random_state=random_seed)
-        elif selection_method == LayerSelectionMethod.LDA:
-            reduction = LDA(n_components=n_layers)
-
-        if selection_method == LayerSelectionMethod.LDA:
-            reduction.fit(hypercube, y=mask)
-        else:
-            reduction.fit(hypercube)
-
-        return reduction
 
     def render_class_profile(self):
         """
@@ -218,20 +295,20 @@ class HypercubeSet:
         render_hc_spectrum_label(self._hypercube, self._mask)
         self._to_3d(threed_shape)
 
-    def split_train(self, patch_size, max_train_samples=None, remove=True, starting_index=0):
-        """
-        Splits the hypercube set into train and test sets.
-        """
-        if max_train_samples is None:
-            max_train_samples = self._train_indices.shape[0]
-        else:
-            max_train_samples = min(max_train_samples, self._train_indices.shape[0])
-
-        train_indices = self._train_indices[starting_index:starting_index + max_train_samples]
-        if remove:
-            self._train_indices = self._train_indices[starting_index + max_train_samples:]
-
-        return self.__split_indices(train_indices, patch_size, self._hypercube.shape)
+    # def split_train(self, patch_size, max_train_samples=None, remove=True, starting_index=0):
+    #     """
+    #     Splits the hypercube set into train and test sets.
+    #     """
+    #     if max_train_samples is None:
+    #         max_train_samples = self._train_indices.shape[0]
+    #     else:
+    #         max_train_samples = min(max_train_samples, self._train_indices.shape[0])
+    #
+    #     train_indices = self._train_indices[starting_index:starting_index + max_train_samples]
+    #     if remove:
+    #         self._train_indices = self._train_indices[starting_index + max_train_samples:]
+    #
+    #     return self.__split_indices(train_indices, patch_size, self._hypercube.shape)
 
     def split_swath(self, patch_size, patch_id=0, limit=None, offset=0):
         swath_shape = self._hypercube_shapes[patch_id]
@@ -312,61 +389,31 @@ class HypercubeSet:
         hc_indices = [i for i in range(self.get_num_hypercubes())]
         return self.split(hc_indices, chunk_size, overlapping)
 
-    def split(self, hc_ids, chunk_size, overlapping):
-        """
-        Splits the hypercubes selected by hc_ids into chunks.
-        """
-        jump = chunk_size - overlapping
-        chunk = []
-        chunk_label = []
-
-        for hc_id in hc_ids:
-            hc_shape = self._hypercube_shapes[hc_id]
-            x = hc_shape[1] * hc_id
-            boundary_x = x + hc_shape[1]
-
-            while x + chunk_size < boundary_x:
-                y = 0
-
-                while y + chunk_size < hc_shape[0]:
-                    chunk.append(self._hypercube[int(y):int(y + chunk_size), int(x):int(x + chunk_size), :])
-                    chunk_label.append(self._mask[int(y):int(y + chunk_size), int(x):int(x + chunk_size)])
-
-                    y += jump
-
-                x += jump
-
-        return np.array(chunk), np.array(chunk_label)
-
-    def standardize(self, num_features=30, standardize=True, selection_method=LayerSelectionMethod.FACTOR_ANALYSIS,
-                    reduction=None, standard_scaler=None):
-        """
-        Preprocessing of UAV data into relevant data for DL.
-        """
-        threed_shape = self._hypercube.shape
-        self._hypercube, self._mask = self.flatten()
-
-        with alive_bar(2, force_tty=True) as bar:
-            if reduction is None:
-                reduction = self.reduce_layers(n_layers=num_features, selection_method=selection_method,
-                                               hypercube=self._hypercube[self._train_indices],
-                                               mask=self._mask[self._train_indices])
-            self._hypercube = reduction.transform(self._hypercube)
-
-            bar()
-
-            if standardize:
-                if standard_scaler is None:
-                    standard_scaler = StandardScaler()
-                    standard_scaler.fit(self._hypercube[self._train_indices])
-                self._hypercube = standard_scaler.transform(self._hypercube)
-
-            bar()
-
-        threed_shape = (threed_shape[0], threed_shape[1], self._hypercube.shape[1])
-        self._to_3d(threed_shape)
-
-        return reduction, standard_scaler
+    # def split(self, hc_ids, chunk_size, overlapping):
+    #     """
+    #     Splits the hypercubes selected by hc_ids into chunks.
+    #     """
+    #     jump = chunk_size - overlapping
+    #     chunk = []
+    #     chunk_label = []
+    #
+    #     for hc_id in hc_ids:
+    #         hc_shape = self._hypercube_shapes[hc_id]
+    #         x = hc_shape[1] * hc_id
+    #         boundary_x = x + hc_shape[1]
+    #
+    #         while x + chunk_size < boundary_x:
+    #             y = 0
+    #
+    #             while y + chunk_size < hc_shape[0]:
+    #                 chunk.append(self._hypercube[int(y):int(y + chunk_size), int(x):int(x + chunk_size), :])
+    #                 chunk_label.append(self._mask[int(y):int(y + chunk_size), int(x):int(x + chunk_size)])
+    #
+    #                 y += jump
+    #
+    #             x += jump
+    #
+    #     return np.array(chunk), np.array(chunk_label)
 
     def swap_classes(self, class1, class2):
         """
@@ -391,7 +438,7 @@ class HypercubeSet:
         id_image = np.zeros(shape=(h, w))
         color_dict = {(0, 0, 0): 0}
 
-        # # Load color_dict with pickle
+        # Load color_dict with pickle
         # with open('color_dict_2022.pkl', 'rb') as handle:
         #     color_dict = pickle.load(handle)
 
@@ -403,15 +450,13 @@ class HypercubeSet:
 
                 id_image[y, x] = color_dict[color]
 
-        # print(color_dict)
-        #
         # unique_ids = np.unique(id_image)
         # for i in range(0, len(unique_ids)):
         #     # Count number of pixels for each class
         #     num_pixels = np.count_nonzero(id_image == unique_ids[i])
         #     print("Class " + str(unique_ids[i]) + " has " + str(num_pixels) + " pixels.")
 
-        # # Save color_dict to file as an object
+        # Save color_dict to file as an object
         # with open('color_dict_2022.pkl', 'wb') as f:
         #     pickle.dump(color_dict, f, pickle.HIGHEST_PROTOCOL)
 

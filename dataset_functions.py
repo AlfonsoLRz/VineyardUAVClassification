@@ -1,4 +1,6 @@
 import albumentations as A
+
+import randomness
 from hypercube_set import *
 from imblearn.over_sampling import *
 from imblearn.under_sampling import *
@@ -124,8 +126,9 @@ def shuffle(patch, label):
     return patch[perm], label[perm]
 
 
-def split_train_test(patch, labels, test_size=0.7):
+def split_train_test(patch, labels, test_size=0.7, random_seed=42):
     """
     Split data into training and testing sets.
     """
+    randomness.set_seed(random_seed)
     return train_test_split(patch, labels, test_size=test_size, shuffle=True, random_state=random_seed)

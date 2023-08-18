@@ -1,4 +1,5 @@
 import copy
+from hypercube_set import *
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
 import matplotlib.patches as mpatches
@@ -47,6 +48,7 @@ def render_confusion_matrix(y_test, y_pred, model_name):
     # sn.heatmap(df_cm, annot=True, annot_kws={"size": 10}, cmap='Blues', fmt='g')
     # sns.heatmap(cmn, annot=True, fmt='.2f', xticklabels=target_names, yticklabels=target_names)
 
+    plt.figure(figsize=(12, 10))
     sns.heatmap(cmn, annot=True, fmt='.2f', cmap='Blues')
     plt.ylabel('Actual', **regular_font)
     plt.xlabel('Predicted', **regular_font)
@@ -66,11 +68,40 @@ def render_hc_spectrum_label(hc_numpy, mask):
     Renders the spectrum of every label in the hypercube.
     """
     n_classes = np.unique(mask)
+    font, title_font, regular_font = get_plot_fonts()
+    rows, cols = 2, len(n_classes) // 2
 
-    for class_id in n_classes:
+    dict = red_vineyard_name
+    width = 16
+    if paths.target_area == 'white':
+        cols += 1
+        width += 4
+        dict = white_vineyard_name
+
+    plt.subplots(figsize=(width, 6))
+    for i, class_id in enumerate(n_classes):
+        row = i // cols
+        col = i % cols
+
+        plt.subplot(rows, cols, 1 + i)
         sample_subset = hc_numpy[mask == class_id, :]
-        plt.plot(np.average(sample_subset, axis=0), label=class_id)
-    plt.legend()
+
+        mean = np.average(sample_subset, axis=0)
+        variance = np.var(sample_subset, axis=0)
+        plt.fill_between(range(len(mean)), mean - variance, mean + variance, alpha=0.2)
+        plt.plot(mean, label=class_id)
+
+        # Change font of axes
+        plt.title(dict[class_id], **title_font)
+        if row > 0:
+            plt.xlabel('Spectral band', **regular_font)
+        if col == 0:
+            plt.ylabel('Reflectance', **regular_font)
+        plt.xticks(fontproperties=font)
+        plt.yticks(fontproperties=font)
+
+    plt.tight_layout()
+    plt.savefig(paths.result_folder + 'images/hc_spectrum_label.png', dpi=500)
     plt.show()
 
 
@@ -81,7 +112,7 @@ def render_label_diff(label_diff, filename, dpi=500):
     # Get pixels from hypercube zero whose labels are different from the ground truth
 
     plt.imshow(label_diff, cmap='hot', interpolation='nearest')
-    plt.colorbar()
+    # plt.colorbar()
     plt.axis('off')
     plt.tight_layout()
     plt.savefig(paths.result_folder + filename, dpi=dpi)
@@ -106,11 +137,28 @@ def render_label_distribution(patches, labels):
     plt.savefig(paths.result_folder + 'label_distribution.png')
 
 
-def render_mask_histogram(label):
+def render_mask_histogram(label, render_classes_count=2):
     """
     Renders the histogram of the mask.
     """
-    plt.hist(label.flatten(), bins='auto', rwidth=1.0)
+    unique, counts = np.unique(label, return_counts=True)
+
+    # Plot
+    plt.figure(figsize=(7, 3))
+    plt.bar(unique, counts, width=0.5)
+    plt.xticks(unique)
+
+    # Plot number of samples of top two classes as lines
+    if render_classes_count > 0:
+        top_classes = counts.argsort()[-render_classes_count:][::-1]
+        for i in top_classes:
+            plt.plot([0 - 0.5, np.max(unique) + 1 - 0.5], [counts[i], counts[i]], 'r--', linewidth=1)
+
+    plt.xlabel('Class')
+    plt.ylabel('Number of samples')
+    plt.xlim([0 - 0.5, np.max(unique) + 1 - 0.5])
+    plt.tight_layout()
+    # plt.savefig(paths.result_folder + 'images/mask_histogram.png', dpi=500)
     plt.show()
 
 
@@ -124,8 +172,8 @@ def render_model_history(history, model_name):
     accuracy = history.get_accuracy_key()
     history_vector = history.get_history()
 
-    plt.plot(h_epochs, history_vector[accuracy], label="Training Accuracy")
-    plt.plot(h_epochs, history_vector['val_' + accuracy], label="Validation Accuracy")
+    plt.plot(h_epochs, history_vector[accuracy], label="Training accuracy")
+    plt.plot(h_epochs, history_vector['val_' + accuracy], label="Validation accuracy")
     ax = plt.gca()
     for label in ax.get_xticklabels():
         label.set_fontproperties(font)
@@ -142,8 +190,8 @@ def render_model_history(history, model_name):
     plt.figure()
 
     # Loss
-    plt.plot(h_epochs, history_vector['loss'], label="Training Loss")
-    plt.plot(h_epochs, history_vector['val_loss'], label="Validation Loss")
+    plt.plot(h_epochs, history_vector['loss'], label="Training loss")
+    plt.plot(h_epochs, history_vector['val_loss'], label="Validation loss")
     ax = plt.gca()
     for label in ax.get_xticklabels():
         label.set_fontproperties(font)
@@ -163,15 +211,14 @@ def render_model_history(history, model_name):
 def render_network_training(network_labels, training_time, num_params, title=None, bar_width=0.5):
     font, title_font, regular_font = get_plot_fonts()
 
-    fig = plt.figure(figsize=(7, 4.3))
+    fig = plt.figure(figsize=(10, 10 / 1.8))
     ax = fig.add_subplot(111)
     response_time_y = [x / 60.0 for x in training_time]
     params_y = [x for x in num_params]
 
     data = np.concatenate((np.array([['network', 'time', 'params']]),
                            np.array([network_labels, response_time_y, params_y]).T), axis=0)
-    pd_df = pd.DataFrame(data=data[1:, 1:], index=data[1:, 0], columns=data[0, 1:])\
-        .astype(float)
+    pd_df = pd.DataFrame(data=data[1:, 1:], index=data[1:, 0], columns=data[0, 1:]).astype(float)
     pd_df.plot(kind='bar', secondary_y='params', ax=ax, width=bar_width)
 
     axes = fig.axes
@@ -191,16 +238,16 @@ def render_network_training(network_labels, training_time, num_params, title=Non
 
     cyan_patch = mpatches.Patch(color='cyan', label='Training time')
     orange_patch = mpatches.Patch(color='orange', label='Number of parameters')
-    plt.legend(handles=[cyan_patch, orange_patch], prop=font, frameon=False)
+    plt.legend(handles=[cyan_patch, orange_patch], prop=font, frameon=False, loc='upper left')
     plt.tight_layout()
     plt.savefig(paths.result_folder + 'network_training.png')
     plt.show()
 
 
-def render_time_capacity(response_time, capacity, title=None, bar_width=0.4):
+def render_time_capacity(response_time, capacity, title=None, bar_width=0.6):
     font, title_font, regular_font = get_plot_fonts()
 
-    fig = plt.figure(figsize=(7, 4))
+    fig = plt.figure(figsize=(8, 4))
     ax = fig.add_subplot(111)
     x_val = [x[0] for x in response_time]
     response_time_y = [x[1] / 60.0 for x in response_time]
@@ -208,7 +255,7 @@ def render_time_capacity(response_time, capacity, title=None, bar_width=0.4):
 
     data = np.concatenate((np.array([['patchsize', 'time', 'capacity']]),
                            np.array([x_val, response_time_y, capacity_y]).T), axis=0)
-    pd_df = pd.DataFrame(data=data[1:, 1:], index=data[1:, 0].astype(np.float).astype(np.int), columns=data[0, 1:])\
+    pd_df = pd.DataFrame(data=data[1:, 1:], index=data[1:, 0].astype(np.float).astype(np.int), columns=data[0, 1:]) \
         .astype(float)
     pd_df.plot(kind='bar', secondary_y='capacity', ax=ax, width=bar_width)
 
@@ -223,7 +270,35 @@ def render_time_capacity(response_time, capacity, title=None, bar_width=0.4):
     axes[1].set_ylabel('#Parameters', fontdict=regular_font)
     if title is not None:
         plt.title(title, fontdict=title_font)
-    plt.savefig(paths.result_folder + 'time_capacity.png')
+    plt.tight_layout()
+    plt.savefig(paths.result_folder + 'time_capacity.png', dpi=300)
+    plt.show()
+
+
+def render_transformation_grid(patches, transformer, x, y, z=0):
+    transformed_patches = patches.copy()
+
+    for i in range(len(patches)):
+        transformed_patches[i, :, :, z] = transformer(image=patches[i, :, :, z])["image"]
+
+    fig = plt.figure(figsize=(x * 2, y * 2))
+
+    for i in range(x * y // 2):
+        # Random image
+        idx = np.random.randint(0, len(patches))
+
+        ax = fig.add_subplot(y, x, i * 2 + 1, xticks=[], yticks=[])
+        if i // (x // 2) == 0:
+            ax.set_title('Original', fontdict={'fontsize': 10})
+        ax.imshow(patches[idx, :, :, z])
+
+        ax = fig.add_subplot(y, x, i * 2 + 2, xticks=[], yticks=[])
+        if i // (x // 2) == 0:
+            ax.set_title('Transformed', fontdict={'fontsize': 10})
+        ax.imshow(transformed_patches[idx, :, :, z])
+
+    plt.tight_layout()
+    plt.savefig(paths.result_folder + 'transformation_grid.png')
     plt.show()
 
 
@@ -233,27 +308,27 @@ def render_window_size_metric(patch_size_metric, annotate_indices=[], title=None
     """
     font, title_font, regular_font = get_plot_fonts()
 
-    fig = plt.figure(figsize=(6, 4))
+    fig = plt.figure(figsize=(7, 4))
     ax = fig.add_subplot(111)
     x_val = [x[0] for x in patch_size_metric]
     y_val = [x[1] for x in patch_size_metric]
     ax.plot(x_val, y_val, 'rs', x_val, y_val, 'r-')
     ax.set_xlim([np.min(x_val) - 0.6, np.max(x_val) + 0.6])
-    ax.set_ylim([np.min(y_val) - 0.02, np.max(y_val) + 0.02])
+    ax.set_ylim([np.min(y_val) - 0.02, np.max(y_val) + 0.025])
     ax.set_xticks(x_val)
     set_axis_font(ax, font)
 
     # Annotate only certain values
     for idx in annotate_indices:
         ax.annotate('{0:.4f}'.format(y_val[idx][0]), xy=(x_val[idx], y_val[idx][0]),
-                    xytext=(x_val[idx] + 1, y_val[idx][0] + 0.008), **regular_font)
+                    xytext=(x_val[idx] - 1, y_val[idx][0] + 0.012), **regular_font)
 
-    plt.xlabel('Window size', fontdict=regular_font)
+    plt.xlabel('Patch size', fontdict=regular_font)
     plt.ylabel('Overall Accuracy', fontdict=regular_font)
     if title is not None:
         plt.title(title, fontdict=title_font)
     plt.tight_layout()
-    plt.savefig(paths.result_folder + 'window_size_test.png')
+    plt.savefig(paths.result_folder + 'window_size_test.png', dpi=300)
     plt.show()
 
 
@@ -288,7 +363,7 @@ def get_rgb_mask(mask, max_labels):
     return rgb_mask
 
 
-def plot_patch_variance(patch, patch_labels, axis, multiplier=1.0, alpha_variance=0.1, xtick_step = 5):
+def plot_patch_variance(patch, patch_labels, axis, multiplier=1.0, alpha_variance=0.1, xtick_step=5):
     patch_shape = patch.shape
     unique_labels = np.unique(patch_labels)
     flatten_patch = np.reshape(patch, (patch_shape[0] * patch_shape[1], patch_shape[2]))
@@ -413,31 +488,44 @@ def render_patches_examples(original_patches, standard_patches, labels, reduced_
     plt.savefig(paths.result_folder + "patch_grid.png", dpi=300, transparent=True)
 
 
-def render_manifold_separability(embedding, label, include_annotations=True):
+def render_manifold_separability(embedding, labels, include_annotations=True):
     """
     Renders the t-SNE of the spectrum of every label in the hypercube.
     """
+    different_labels = np.unique(labels)
+    num_different_labels = len(different_labels)
+
     # Adjust size of plot
     font, title_font, regular_font = get_plot_fonts()
+    regular_font['size'] = 21
     plt.figure(figsize=(8, 6))
-    plt.scatter(embedding[:, 0], embedding[:, 1], c=label, cmap='Spectral', s=5)
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=labels, cmap='Spectral', s=5)
     if include_annotations:
-        annotations = get_annotation_labels(embedding, label, prob=0.009)
         ax = plt.gca()
+        annotations = copy.copy(labels)
+        annotations = [str(x) for x in annotations]
 
-        for idx in range(len(annotations)):
-            ax.annotate(annotations[idx], (embedding[idx, 0], embedding[idx, 1]),
-                        xytext=(embedding[idx, 0] + 0.05, embedding[idx, 1] + 0.3),
-                        bbox=dict(boxstyle="round", alpha=0.05), **regular_font)
+        # annotations = get_annotation_labels(embedding, labels)
+        #
+        # for idx in range(len(annotations)):
+        #     ax.annotate(annotations[idx], (embedding[idx, 0], embedding[idx, 1]),
+        #                 xytext=(embedding[idx, 0] + 0.05, embedding[idx, 1] + 0.3),
+        #                 bbox=dict(boxstyle="round", alpha=0.4), **regular_font)
+        for label in different_labels:
+            # Pick one random sample
+            label_idx = np.random.choice(np.where(labels == label)[0])
+            ax.annotate(annotations[label_idx], (embedding[label_idx, 0], embedding[label_idx, 1]),
+                        xytext=(embedding[label_idx, 0] + 0.05, embedding[label_idx, 1] + 0.3),
+                        bbox=dict(boxstyle="round", alpha=0.2), **regular_font)
 
     plt.gca().set_aspect('equal', 'datalim')
-    cb = plt.colorbar(boundaries=np.arange(11) - 0.5)
-    cb.set_ticks(np.arange(10))
+    cb = plt.colorbar(boundaries=np.arange(num_different_labels + 1) - 0.5, fraction=0.035, pad=0)
+    cb.set_ticks(np.arange(num_different_labels))
     for t in cb.ax.get_yticklabels():
         t.set_fontproperties(font)
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig(paths.result_folder + "separability.png", dpi=300, transparent=True)
+    plt.savefig(paths.result_folder + "separability.png", dpi=500, transparent=True)
     plt.show()
 
 

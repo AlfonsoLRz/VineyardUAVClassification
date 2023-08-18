@@ -67,13 +67,16 @@
         "patch_size": "24",
         "patch_overlapping": "23"
     },
-    "batch_size": "512",
-    "epochs": "100",
+    "batch_size": "1024",
+    "epochs": "400",
     "last_activation": "softmax",
     "kernel_size": "3",
     "loss": "sparse_categorical_crossentropy",
-    "patch_size": "21",
-    "patch_overlapping": "15",
-    "test_split": "0.3",
-    "validation_split": "0.1"
+    "patch_size": "23",
+    "patch_overlapping": "22",
+    "test_split": "0.15",
+    "validation_split": "0.12",
+    "num_transformation_iterations": "2",
+    "num_training_splits": "9",
+    "num_test_splits": "5"
 }

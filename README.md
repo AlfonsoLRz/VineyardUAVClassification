@@ -90,7 +90,7 @@ Note that the patch size should be an odd number, whereas overlapping must be lo
 
 The following images depict the confusion matrices and separability of the proposed network.
 
-![Confusion Matrices](readme_assets/confusion_matrices.png)
+![Confusion Matrices](readme_assets/confusion_matrix.png)
 ![Separability](readme_assets/separability.png)
 
 # Acknowledgments

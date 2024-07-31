@@ -25,9 +25,9 @@ import umap.umap_ as umap
 
 def get_plot_fonts():
     font = 'Adobe Devanagari'
-    title_font = {'fontname': font, 'size': 15}
-    regular_font = {'fontname': font, 'size': 14}
-    font = font_manager.FontProperties(family=font, size=14)
+    title_font = {'fontname': font, 'size': 17}
+    regular_font = {'fontname': font, 'size': 17}
+    font = font_manager.FontProperties(family=font, size=17)
 
     return font, title_font, regular_font
 

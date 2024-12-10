@@ -1,4 +1,4 @@
-# Deep Learning classification of hyperspectral UAV swaths
+# Deep Learning classification of hyperspectral UAV images
 
 ![Python](https://img.shields.io/badge/Python-3.9-green.svg) 
 ![Keras](https://img.shields.io/badge/Keras-2.10.0-red.svg) 

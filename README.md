@@ -12,7 +12,7 @@
 
 This repository contains additional material from the paper titled 'Classification of vineyard varieties with UAV hyperspectral imaging'. It contains the source code, the trained networks in `.h5` file format and some brief concepts for anyone wondering how to make this project work.
 
-![Vineyard Vila Real](readme_assets/vineyard_background.jpg)
+<img src="readme_assets/vineyard_background.jpg" width="100%" alt="Vineyard background">
 
 # Requirements
 
@@ -31,7 +31,9 @@ model = keras.models.load_model(network_file, custom_objects=
 
 This operation loads both the underlying CNN architecture and its weights. You can check the loaded network by plotting it in a graph. It should be something similar to the following image:
 
-![Network Summary](readme_assets/network.png)
+<p align="center">
+    <img src="readme_assets/network.png" width="80%" alt="Network structure">
+</p>
 
 ```
 if show_summary:
@@ -90,8 +92,12 @@ Note that the patch size should be an odd number, whereas overlapping must be lo
 
 The following images depict the confusion matrices and separability of the proposed network.
 
-![Confusion Matrices](readme_assets/confusion_matrix.png)
-![Separability](readme_assets/separability.png)
+<p align="center">
+    <img src="readme_assets/confusion_matrix.png" width="50%" alt="Confusion matrix">
+</p>
+<p align="center">
+    <img src="readme_assets/separability.png" width="80%" alt="Separability of classes">
+</p>
 
 # Acknowledgments
 

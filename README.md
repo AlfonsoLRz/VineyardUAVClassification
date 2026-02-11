@@ -46,8 +46,8 @@ if render_image:
 ```
 
 # Datasets
-
-If these are required, please contact allopezr@ujaen.es and they will be provided if the petition is properly justified. 
+ 
+The data are available on [Zenodo](https://zenodo.org/records/15834062). For each hyperspectral image, there is a corresponding mask file (`rf_*_class`) that encodes the grape varieties, where each color represents a different variety. Images of red and white varieties must be read separately; however, the same color may be used to represent both red and white varieties. This distinction is handled in the code (see `hypercube_loader.py`), as the model was trained using both red and white varieties simultaneously.
 
 # Training 
 
